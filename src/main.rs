@@ -45,30 +45,22 @@ impl Opts {
                 "-n" | "--no-clear" => clear = false,
                 "-o" | "--no-color" => color = false,
                 "-d" | "--disk" => {
-                    if let Some(path) = args.next() {
-                        disk_mount = path;
-                    } else {
+                    disk_mount = args.next().unwrap_or_else(|| {
                         eprintln!("Error: --disk requires a path argument (e.g., --disk /var)");
                         process::exit(1);
-                    }
+                    });
                 }
                 "-c" | "--cpu-sample-rate" => {
-                    if let Some(val) = args.next() {
-                        match val.parse::<u64>() {
-                            Ok(ms) if ms > 0 => cpu_sample_ms = ms,
-                            _ => {
-                                eprintln!(
-                                    "Error: --cpu-sample-rate requires a positive integer (e.g., -c 250)"
-                                );
-                                process::exit(1);
-                            }
-                        }
-                    } else {
+                    let val = args.next().unwrap_or_else(|| {
                         eprintln!(
                             "Error: --cpu-sample-rate requires a numeric argument (e.g., -c 250)"
                         );
                         process::exit(1);
-                    }
+                    });
+                    cpu_sample_ms = val.parse::<u64>().ok().filter(|&ms| ms > 0).unwrap_or_else(|| {
+                        eprintln!("Error: --cpu-sample-rate requires a positive integer (e.g., -c 250)");
+                        process::exit(1);
+                    });
                 }
                 "-h" | "--help" => {
                     print_usage();
@@ -562,14 +554,12 @@ fn render_system_section(sys: &SystemInfo, c: &Colors) {
     print_row("  Uptime:", &uptime_str, &Threshold::None, c);
 }
 
-/// `render_stats_section()` renders the dynamic resource metrics part of the dashboard
-///
-fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &str, c: &Colors) {
+/// `render_cpu_rows()` helper to render load average and CPU usage rows
+fn render_cpu_rows(cpu: &CpuInfo, c: &Colors) {
     let load_str = cpu.loadavg.map_or_else(
         || "N/A".to_string(),
         |(l1, l5, l15)| format!("{l1:.2}, {l5:.2}, {l15:.2} (1m, 5m, 15m)"),
     );
-
     print_row("  Load averages:", &load_str, &Threshold::None, c);
 
     let (cpu_str, cpu_thresh) = cpu.usage_pct.map_or_else(
@@ -585,16 +575,17 @@ fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &s
             )
         },
     );
-
     print_row("  CPU usage:", &cpu_str, &cpu_thresh, c);
+}
 
+/// `render_mem_row()` helper to render the memory usage row
+fn render_mem_row(mem: &MemInfo, c: &Colors) {
     let mem_str = format!(
         "{:.1}% ({}MB/{}MB)",
         mem.pct,
         mem.used_kb / 1024,
         mem.total_kb / 1024
     );
-
     print_row(
         "  Memory usage:",
         &mem_str,
@@ -605,7 +596,10 @@ fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &s
         },
         c,
     );
+}
 
+/// `render_disk_row()` helper to render the disk usage row
+fn render_disk_row(disk: &DiskInfo, mount: &str, c: &Colors) {
     let (disk_str, disk_thresh) = if disk.total_kb == 0 {
         ("N/A".to_string(), Threshold::None)
     } else {
@@ -625,8 +619,15 @@ fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &s
             },
         )
     };
-
     print_row("  Disk usage:", &disk_str, &disk_thresh, c);
+}
+
+/// `render_stats_section()` renders the dynamic resource metrics part of the dashboard
+///
+fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &str, c: &Colors) {
+    render_cpu_rows(cpu, c);
+    render_mem_row(mem, c);
+    render_disk_row(disk, mount, c);
 }
 
 /// `render_user_section()` renders the logged-in user information part of the dashboard

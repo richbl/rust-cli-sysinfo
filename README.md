@@ -7,7 +7,7 @@ A simple Rust-based system services dashboard that runs in a Linux terminal
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-<img width="850" alt="Screenshot showing cycling trainer" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/rust-cli-sysinfo_output.png">
+<img width="650" alt="Screenshot showing cycling trainer" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/rust-cli-sysinfo_output.png">
 </p>
 <!-- markdownlint-enable MD033 -->
 

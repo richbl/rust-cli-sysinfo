@@ -5,3 +5,11 @@
 
 [dependencies]
   pci-ids = "0.2.6"
+
+[lints.clippy]
+  all = "warn"
+  too_many_lines = "warn"
+  cognitive_complexity = "warn"
+  excessive-nesting = "warn"
+  pedantic = "warn"
+  nursery = "warn"

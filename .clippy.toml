@@ -1,0 +1,5 @@
+# Set upper limit for function length to prevent excessively long functions that are hard to read and maintain
+too-many-lines-threshold = 50
+
+# Limit cognitive load per function to prevent functions that are too complex to understand easily
+cognitive-complexity-threshold = 15

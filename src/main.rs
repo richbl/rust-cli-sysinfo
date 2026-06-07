@@ -17,6 +17,7 @@ use std::{
 use pci_ids::{Device, FromId, Vendor};
 
 const VERSION: &str = "0.1.0";
+const SEP: &str = "─────────────────────────────────────────────────────────";
 
 // Command-line options struct
 //
@@ -103,7 +104,7 @@ struct Colors {
 // Colors::new() initializes ANSI color codes if enabled, or empty strings if disabled
 //
 impl Colors {
-    fn new(enabled: bool) -> Self {
+    const fn new(enabled: bool) -> Self {
         if enabled {
             Self {
                 red: "\x1b[0;31m",
@@ -165,7 +166,7 @@ struct UsersInfo {
     users: Vec<String>,
 }
 
-/// print_usage() prints help information to the console
+/// `print_usage()` prints help information to the console
 ///
 fn print_usage() {
     println!(
@@ -182,7 +183,7 @@ Options:
     );
 }
 
-/// read_first_line() reads the first line of a file at the given path
+/// `read_first_line()` reads the first line of a file at the given path
 ///
 fn read_first_line(path: &str) -> Option<String> {
     let file = fs::File::open(path).ok()?;
@@ -193,7 +194,7 @@ fn read_first_line(path: &str) -> Option<String> {
     Some(line)
 }
 
-/// collect_system() gathers system information, including hostname, OS, kernel version, and uptime
+/// `collect_system()` gathers system information, including hostname, OS, kernel version, and uptime
 ///
 fn collect_system() -> SystemInfo {
     let hostname = read_first_line("/proc/sys/kernel/hostname").unwrap_or_else(|| "unknown".into());
@@ -232,19 +233,9 @@ fn collect_system() -> SystemInfo {
     }
 }
 
-/// collect_cpu() gathers CPU information, including load average and usage percentage
+/// `collect_cpu()` gathers CPU information, including load average and usage percentage
 ///
 fn collect_cpu(sample_ms: u64) -> CpuInfo {
-    let loadavg = (|| -> Option<(f64, f64, f64)> {
-        let line = read_first_line("/proc/loadavg")?;
-        let mut parts = line.split_whitespace();
-        Some((
-            parts.next()?.parse().ok()?,
-            parts.next()?.parse().ok()?,
-            parts.next()?.parse().ok()?,
-        ))
-    })();
-
     struct CpuSnap {
         total: u64,
         idle: u64,
@@ -273,8 +264,19 @@ fn collect_cpu(sample_ms: u64) -> CpuInfo {
         })
     };
 
+    let loadavg = (|| -> Option<(f64, f64, f64)> {
+        let line = read_first_line("/proc/loadavg")?;
+        let mut parts = line.split_whitespace();
+        Some((
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+        ))
+    })();
+
     let usage_pct = (|| -> Option<f64> {
         let snap1 = read_snap()?;
+
         thread::sleep(Duration::from_millis(sample_ms));
         let snap2 = read_snap()?;
 
@@ -284,13 +286,18 @@ fn collect_cpu(sample_ms: u64) -> CpuInfo {
         if d_total == 0 {
             return Some(0.0);
         }
-        Some((d_total as f64 - d_idle as f64) / (d_total as f64) * 100.0)
+
+        let d_used = d_total.saturating_sub(d_idle);
+
+        #[allow(clippy::cast_precision_loss)]
+        let pct = (d_used as f64 / d_total as f64) * 100.0;
+        Some(pct)
     })();
 
     CpuInfo { loadavg, usage_pct }
 }
 
-/// collect_cpu_model() attempts to read the CPU model name from /proc/cpuinfo
+/// `collect_cpu_model()` attempts to read the CPU model name from /proc/cpuinfo
 ///
 fn collect_cpu_model() -> Option<String> {
     // Read the standard Linux CPU info virtual file
@@ -310,7 +317,7 @@ fn collect_cpu_model() -> Option<String> {
     None
 }
 
-/// collect_gpu_model() attempts to identify GPU models by reading from /sys/class/drm and using
+/// `collect_gpu_model()` attempts to identify GPU models by reading from /sys/class/drm and using
 /// the PCI IDs
 ///
 fn collect_gpu_model() -> Vec<String> {
@@ -341,7 +348,7 @@ fn collect_gpu_model() -> Vec<String> {
     names.into_iter().collect()
 }
 
-/// gpu_name_from_card() reads the vendor and device IDs from a given card path and looks up the
+/// `gpu_name_from_card()` reads the vendor and device IDs from a given card path and looks up the
 /// corresponding GPU name
 ///
 fn gpu_name_from_card(card_path: &Path) -> Option<String> {
@@ -357,7 +364,7 @@ fn gpu_name_from_card(card_path: &Path) -> Option<String> {
         .or_else(|| Some(vendor.name().to_owned()))
 }
 
-/// read_hex_u16() reads a hexadecimal value from a file and returns it as a u16
+/// `read_hex_u16()` reads a hexadecimal value from a file and returns it as a u16
 ///
 fn read_hex_u16(path: &Path) -> Option<u16> {
     let contents = fs::read_to_string(path).ok()?;
@@ -366,7 +373,7 @@ fn read_hex_u16(path: &Path) -> Option<u16> {
     u16::from_str_radix(value, 16).ok()
 }
 
-/// collect_memory() gathers memory information, including total, used, and percentage used
+/// `collect_memory()` gathers memory information, including total, used, and percentage used
 ///
 fn collect_memory() -> MemInfo {
     let mut total_kb = 0;
@@ -398,8 +405,11 @@ fn collect_memory() -> MemInfo {
 
     let avail_kb = available_kb.unwrap_or(free_kb);
     let used_kb = total_kb.saturating_sub(avail_kb);
+
     let pct = if total_kb > 0 {
-        (used_kb as f64 / total_kb as f64) * 100.0
+        #[allow(clippy::cast_precision_loss)]
+        let val = (used_kb as f64 / total_kb as f64) * 100.0;
+        val
     } else {
         0.0
     };
@@ -411,7 +421,7 @@ fn collect_memory() -> MemInfo {
     }
 }
 
-/// collect_disk() gathers disk information, including total, used, and percentage used for the
+/// `collect_disk()` gathers disk information, including total, used, and percentage used for the
 /// given mount point
 ///
 fn collect_disk(mount: &str) -> DiskInfo {
@@ -440,8 +450,11 @@ fn collect_disk(mount: &str) -> DiskInfo {
 
     let total_kb: u64 = cols[1].parse().unwrap_or(0);
     let used_kb: u64 = cols[2].parse().unwrap_or(0);
+
     let pct = if total_kb > 0 {
-        (used_kb as f64 / total_kb as f64) * 100.0
+        #[allow(clippy::cast_precision_loss)]
+        let val = (used_kb as f64 / total_kb as f64) * 100.0;
+        val
     } else {
         0.0
     };
@@ -453,7 +466,7 @@ fn collect_disk(mount: &str) -> DiskInfo {
     }
 }
 
-/// collect_users() gathers information about currently logged-in users by parsing the output of
+/// `collect_users()` gathers information about currently logged-in users by parsing the output of
 /// the `who` command
 ///
 fn collect_users() -> UsersInfo {
@@ -473,9 +486,9 @@ fn collect_users() -> UsersInfo {
     UsersInfo { users }
 }
 
-/// print_row() prints a single row of the dashboard with appropriate coloring based on thresholds
+/// `print_row()` prints a single row of the dashboard with appropriate coloring based on thresholds
 ///
-fn print_row(label: &str, value: &str, threshold: Threshold, c: &Colors) {
+fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
     let color = match threshold {
         Threshold::Check {
             value: v,
@@ -493,7 +506,7 @@ fn print_row(label: &str, value: &str, threshold: Threshold, c: &Colors) {
     println!("{:<16} {}{}{}", label, color, value, c.reset);
 }
 
-/// format_uptime() converts uptime in seconds to a human-readable format ("001d:02h:03m:04s")
+/// `format_uptime()` converts uptime in seconds to a human-readable format ("001d:02h:03m:04s")
 ///
 fn format_uptime(seconds: u64) -> String {
     let days = seconds / 86400;
@@ -504,48 +517,32 @@ fn format_uptime(seconds: u64) -> String {
     format!("{days:03}d:{hours:02}h:{mins:02}m:{secs:02}s")
 }
 
-/// format_size() converts a size in kilobytes to a human-readable format ("100K")
+/// `format_size()` converts a size in kilobytes to a human-readable format ("100K")
 ///
 fn format_size(kb: u64) -> String {
+    #[allow(clippy::cast_precision_loss)]
     let k = kb as f64;
-    if k >= 1073741824.0 {
-        format!("{:.1}T", k / 1073741824.0)
-    } else if k >= 1048576.0 {
-        format!("{:.1}G", k / 1048576.0)
-    } else if k >= 1024.0 {
-        format!("{:.1}M", k / 1024.0)
+
+    if k >= 1_073_741_824.0 {
+        format!("{:.1}T", k / 1_073_741_824.0)
+    } else if k >= 1_048_576.0 {
+        format!("{:.1}G", k / 1_048_576.0)
+    } else if k >= 1_024.0 {
+        format!("{:.1}M", k / 1_024.0)
     } else {
         format!("{kb}K")
     }
 }
 
-/// render_dashboard() takes all collected information and renders the dashboard to the console
+/// `render_system_section()` renders the static system information part of the dashboard
 ///
-fn render_dashboard(
-    sys: &SystemInfo,
-    cpu: &CpuInfo,
-    mem: &MemInfo,
-    disk: &DiskInfo,
-    users: &UsersInfo,
-    opts: &Opts,
-    c: &Colors,
-) {
-    if opts.clear {
-        print!("\x1bc");
-    }
-
-    let sep = "─────────────────────────────────────────────────────────";
-
-    println!("\n  {}{}Rust-CLI-SysInfo{}", c.bold, c.cyan, c.reset);
-    println!("  {}{}{}", c.cyan, sys.os, c.reset);
-    println!("  {}{}{}", c.cyan, sep, c.reset);
-
-    print_row("  Hostname:", &sys.hostname, Threshold::None, c);
+fn render_system_section(sys: &SystemInfo, c: &Colors) {
+    print_row("  Hostname:", &sys.hostname, &Threshold::None, c);
 
     print_row(
         "  CPU:",
-        &sys.cpu_model.as_ref().unwrap_or(&"Unknown".into()),
-        Threshold::None,
+        sys.cpu_model.as_deref().unwrap_or("Unknown"),
+        &Threshold::None,
         c,
     );
 
@@ -554,34 +551,42 @@ fn render_dashboard(
     } else {
         sys.gpu_model.join("\n                 ")
     };
-    print_row("  GPU(s):", &gpu_str, Threshold::None, c);
 
-    print_row("  Kernel:", &sys.kernel, Threshold::None, c);
+    print_row("  GPU(s):", &gpu_str, &Threshold::None, c);
+    print_row("  Kernel:", &sys.kernel, &Threshold::None, c);
 
-    let uptime_str = match sys.uptime_secs {
-        Some(secs) => format_uptime(secs),
-        None => "unknown".to_string(),
-    };
-    print_row("  Uptime:", &uptime_str, Threshold::None, c);
+    let uptime_str = sys
+        .uptime_secs
+        .map_or_else(|| "unknown".to_string(), format_uptime);
 
-    let load_str = match cpu.loadavg {
-        Some((l1, l5, l15)) => format!("{:.2}, {:.2}, {:.2} (1m, 5m, 15m)", l1, l5, l15),
-        None => "N/A".to_string(),
-    };
-    print_row("  Load averages:", &load_str, Threshold::None, c);
+    print_row("  Uptime:", &uptime_str, &Threshold::None, c);
+}
 
-    let (cpu_str, cpu_thresh) = match cpu.usage_pct {
-        Some(v) => (
-            format!("{:.1}%", v),
-            Threshold::Check {
-                value: v,
-                warn: 70.0,
-                crit: 90.0,
-            },
-        ),
-        None => ("N/A".to_string(), Threshold::None),
-    };
-    print_row("  CPU usage:", &cpu_str, cpu_thresh, c);
+/// `render_stats_section()` renders the dynamic resource metrics part of the dashboard
+///
+fn render_stats_section(cpu: &CpuInfo, mem: &MemInfo, disk: &DiskInfo, mount: &str, c: &Colors) {
+    let load_str = cpu.loadavg.map_or_else(
+        || "N/A".to_string(),
+        |(l1, l5, l15)| format!("{l1:.2}, {l5:.2}, {l15:.2} (1m, 5m, 15m)"),
+    );
+
+    print_row("  Load averages:", &load_str, &Threshold::None, c);
+
+    let (cpu_str, cpu_thresh) = cpu.usage_pct.map_or_else(
+        || ("N/A".to_string(), Threshold::None),
+        |v| {
+            (
+                format!("{v:.1}%"),
+                Threshold::Check {
+                    value: v,
+                    warn: 70.0,
+                    crit: 90.0,
+                },
+            )
+        },
+    );
+
+    print_row("  CPU usage:", &cpu_str, &cpu_thresh, c);
 
     let mem_str = format!(
         "{:.1}% ({}MB/{}MB)",
@@ -589,10 +594,11 @@ fn render_dashboard(
         mem.used_kb / 1024,
         mem.total_kb / 1024
     );
+
     print_row(
         "  Memory usage:",
         &mem_str,
-        Threshold::Check {
+        &Threshold::Check {
             value: mem.pct,
             warn: 75.0,
             crit: 90.0,
@@ -608,7 +614,7 @@ fn render_dashboard(
             disk.pct,
             format_size(disk.used_kb),
             format_size(disk.total_kb),
-            opts.disk_mount
+            mount
         );
         (
             text,
@@ -619,21 +625,50 @@ fn render_dashboard(
             },
         )
     };
-    print_row("  Disk usage:", &disk_str, disk_thresh, c);
 
+    print_row("  Disk usage:", &disk_str, &disk_thresh, c);
+}
+
+/// `render_user_section()` renders the logged-in user information part of the dashboard
+///   
+fn render_user_section(users: &UsersInfo, c: &Colors) {
     let user_str = if users.users.is_empty() {
         "Nobody".to_string()
     } else {
         users.users.join(", ")
     };
-    print_row("  User(s):", &user_str, Threshold::None, c);
 
-    println!("  {}{}{}", c.cyan, sep, c.reset);
+    print_row("  User(s):", &user_str, &Threshold::None, c);
+}
 
+/// `render_dashboard()` takes all collected information and renders the dashboard to the console
+///
+fn render_dashboard(
+    sys: &SystemInfo,
+    cpu: &CpuInfo,
+    mem: &MemInfo,
+    disk: &DiskInfo,
+    users: &UsersInfo,
+    opts: &Opts,
+    c: &Colors,
+) {
+    if opts.clear {
+        print!("\x1bc");
+    }
+
+    println!("\n  {}{}Rust-CLI-SysInfo{}", c.bold, c.cyan, c.reset);
+    println!("  {}{}{}", c.cyan, sys.os, c.reset);
+    println!("  {}{}{}", c.cyan, SEP, c.reset);
+
+    render_system_section(sys, c);
+    render_stats_section(cpu, mem, disk, &opts.disk_mount, c);
+    render_user_section(users, c);
+
+    println!("  {}{}{}", c.cyan, SEP, c.reset);
     println!("{}{}  v{}{}", c.bold, c.cyan, VERSION, c.reset);
 }
 
-/// main() makes everything go!
+/// `main()` makes everything go!
 ///
 fn main() {
     // Parse command-line options and initialize colors

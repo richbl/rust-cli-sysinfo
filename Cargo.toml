@@ -7,9 +7,6 @@
   pci-ids = "0.2.6"
 
 [lints.clippy]
-  all = "warn"
-  too_many_lines = "warn"
-  cognitive_complexity = "warn"
-  excessive-nesting = "warn"
+  all = "warn"                  # all lint group includes correctness, suspicious, style, complexity, and perf
   pedantic = "warn"
-  nursery = "warn"
+  cognitive_complexity = "warn" # part of restriction lint group

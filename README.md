@@ -3,6 +3,7 @@
 A simple Rust-based system services dashboard that runs in a Linux terminal
 
 [![Rust Report Card](https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo)](https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623)](https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 ![GitHub Release](https://img.shields.io/github/v/release/richbl/rust-cli-sysinfo?include_prereleases&sort=semver&display_name=tag&color=blue)
 
 <!-- markdownlint-disable MD033 -->

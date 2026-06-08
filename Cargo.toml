@@ -1,9 +1,10 @@
 [package]
   name = "rust-cli-sysinfo"
-  version = "0.1.0"
+  version = "0.2.0"
   edition = "2024"
 
 [dependencies]
+lexopt = "0.3.2"
   pci-ids = "0.2.6"
 
 [lints.clippy]

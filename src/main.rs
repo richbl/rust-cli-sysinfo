@@ -1,4 +1,4 @@
-//! Linux CLI System Information Dashboard
+//! Linux CLI System Information Utility
 //! Displays metrics natively from Linux-based system calls
 //!
 //! Flags: [-d|--disk <path>] [-c|--cpu-sample-rate <ms>] [-n, --no-clear] [-o,--no-color] [-h|--help]
@@ -28,7 +28,7 @@ pub const APP_NAME: &str = "Rust-CLI-SysInfo";
 
 const SEP: &str = "────────────────────────────────────────────────────────────";
 
-/// `Services` aggregates all data-collection services used by the dashboard
+/// `Services` aggregates all data-collection services used by the utility
 struct Services {
     sys: SystemService,
     cpu: CpuService,
@@ -37,7 +37,7 @@ struct Services {
     users: UsersService,
 }
 
-/// `CollectedData` manages the dashboard services results
+/// `CollectedData` manages the utility services results
 struct CollectedData {
     sys: SystemInfo,
     cpu: Result<CpuInfo, AppError>,
@@ -46,9 +46,9 @@ struct CollectedData {
     users: Result<UsersInfo, AppError>,
 }
 
-/// `Services` aggregates all data-collection services used by the dashboard
+/// `Services` aggregates all data-collection services used by the utility
 impl Services {
-    /// `new()` constructs dashboard services, wiring in user-supplied options
+    /// `new()` constructs utility services, wiring in user-supplied options
     ///
     fn new(opts: &Opts) -> Self {
         Self {
@@ -64,7 +64,7 @@ impl Services {
         }
     }
 
-    /// `collect()` runs all dashboard services and returns the collected data
+    /// `collect()` runs all utility services and returns the collected data
     ///
     fn collect(&self) -> CollectedData {
         CollectedData {
@@ -79,7 +79,7 @@ impl Services {
         }
     }
 
-    /// `render()` renders the full dashboard, printing each section with optional color
+    /// `render()` renders the full utility, printing each section with optional color
     ///
     fn render(&self, data: &CollectedData, colors: &Colors) {
         println!(
@@ -115,7 +115,7 @@ impl Services {
     }
 }
 
-/// `main()` parses CLI options, collects system data, and renders the dashboard
+/// `main()` parses CLI options, collects system data, and renders the utility
 ///
 fn main() {
     // Parse command-line options and initialize colors
@@ -147,6 +147,6 @@ fn main() {
         print!("\r\x1b[2K");
     }
 
-    // Render the dashboard already!
+    // Render the thing already!
     services.render(&data, &colors);
 }

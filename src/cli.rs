@@ -3,7 +3,7 @@ use std::process;
 
 use crate::{APP_NAME, VERSION};
 
-/// Parsed command-line options for the dashboard
+/// Parsed command-line options for the utility
 pub struct Opts {
     pub clear: bool,        // Clear the terminal before displaying output
     pub color: bool,        // Enable ANSI color output

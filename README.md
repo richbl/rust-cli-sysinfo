@@ -1,14 +1,14 @@
 # Rust CLI Sysinfo
 
-A simple Rust-based system services dashboard that runs in a Linux terminal
+A simple Rust-based system services utility that runs in a Linux terminal
 
 [![Rust Report Card](https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo)](https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623)](https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-![GitHub Release](https://img.shields.io./github/v/release/richbl/rust-cli-sysinfo?include_prereleases&sort=semver&display_name=tag&color=blue)
+![GitHub Release](https://img.shields.io/github/v/release/richbl/rust-cli-sysinfo?include_prereleases&sort=semver&display_name=tag&color=blue)
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-<img width="650" alt="Screenshot showing cycling trainer" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/rust-cli-sysinfo_output.png">
+<img width="650" alt="Screenshot showing Rust CLI Sysinfo output" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/rust-cli-sysinfo_output.png">
 </p>
 <!-- markdownlint-enable MD033 -->
 
@@ -27,19 +27,23 @@ A simple Rust-based system services dashboard that runs in a Linux terminal
     - Disk usage (defaults to `/home`, but can be overridden with the `-d/--disk` flag)
     - Users currently logged into the system
 
-- Color indicators for CPU, memory, and disk usage, with thresholds for normal (green), warning (yellow) and critical (red) levels
+- Color status indicators for CPU, memory, and disk usage, with threshold levels represented by:
+    - Normal (green)
+    - Warning (yellow)
+    - Critical (red)
 
-- Dashboard display configuration options, including:
-    - `--no-color`: Disable colored output
-    - `--no-clear`: Disable clearing the screen before running the dashboard
+- Display configuration options, including:
+    - `--no-color`: Disable colored status indicators in the output
+    - `--no-clear`: Disable clearing the screen before running the utility
 
-- This is a Linux-only dashboard, designed to be lightweight and efficient, relying on native system calls and libraries
+- This is a Linux-only utility, designed to be lightweight and efficient, relying on native system calls and libraries
+    - No external dependencies
 
 - Built using Rust, ensuring high performance and reliability
 
 ## Rationale
 
-The goal of **rust-cli-sysinfo** is to create a simple and efficient terminal-based dashboard for presenting the status of various system services on Linux. It is designed to provide a quick overview of the status of various services, allowing users to easily identify any issues or bottlenecks in their system.
+The goal of **rust-cli-sysinfo** is to create a simple and efficient terminal-based utility for presenting the status of various system services on Linux. It is designed to provide a quick overview of the status of various services, allowing users to easily identify any issues or bottlenecks in their system.
 
 ## Requirements
 
@@ -59,7 +63,7 @@ export PATH="$PATH:/home/[user]/.local/bin"
 
 ### Building the Project from Source
 
-To build the project, run the following command in the root directory of the project:
+To build the project, clone the project onto your system and run the following command in the root directory of the project:
 
 ```console
 cargo build --release --bin rust-cli-sysinfo
@@ -71,14 +75,13 @@ That's it. You can now run the application by executing `rust-cli-sysinfo` in yo
 
 ## Usage
 
-To run the dashboard, simply execute `rust-cli-sysinfo` in your terminal. By default, the dashboard will clear the terminal display the status of various system services.
+To run the utility, simply execute `rust-cli-sysinfo` in your terminal. By default, the utility will clear the terminal display the status of various system services.
 
 To get help information about the available command-line options, run `rust-cli-sysinfo --help`:
 
 ```console
+Rust-CLI-SysInfo v0.2.0
 Usage: rust-cli-sysinfo [OPTIONS]
-
-Display a system information dashboard
 
 Options:
   -d, --disk <path>           Disk mount to report disk usage for [default: /home]
@@ -88,12 +91,12 @@ Options:
   -h, --help                  Show this help message and exit
 ```
 
-### Running Whenever You Start a New Terminal Session
+### Running in a New Terminal Session
 
-I've added a call to `rust-cli-sysinfo` in my `.bashrc` file, so it runs every time I open a new terminal session, which is precisely the use case that I had initially when I created this project.
+I've added a call to `rust-cli-sysinfo` in my `.bashrc` file, so it runs every time I open a new terminal session. This is precisely the use case that I had initially when I created this project.
 
 ## Roadmap
 
-After a brief stabilization phase, I hope to refactor the code a bit to make it more modular and easier to maintain. I also plan to add support for monitoring additional services in the future, as well as improving the overall user experience and adding some customization options.
+After a brief stabilization phase, I hope to refactor the code a bit to make it more modular and easier to maintain, with support for monitoring additional services in the future.
 
 In general, this is pretty simple executable doing some pretty basic stuff. But if you have any thoughts or ideas for improvement, send them my way.

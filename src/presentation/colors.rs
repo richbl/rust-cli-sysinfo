@@ -41,7 +41,7 @@ impl Colors {
     }
 }
 
-/// Controls value-based color thresholds for dashboard rows
+/// Controls value-based color thresholds for utility rows
 pub enum Threshold {
     None, // No threshold check; the row is rendered in the default color
     Check { value: f64, warn: f64, crit: f64 }, // Apply thresholds: yellow at `warn`, red at `crit`

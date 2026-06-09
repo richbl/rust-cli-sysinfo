@@ -1,9 +1,6 @@
 use std::process;
 
-use super::Service;
-use crate::core::error::AppError;
-use crate::presentation::colors::{Colors, Threshold};
-use crate::presentation::format::print_row;
+use super::prelude::*;
 
 /// Logged-in user list collected from `who`
 pub struct UsersInfo {

@@ -1,11 +1,8 @@
 use std::thread;
 use std::time::Duration;
 
-use super::Service;
-use crate::core::error::AppError;
+use super::prelude::*;
 use crate::core::utils::read_first_line;
-use crate::presentation::colors::{Colors, Threshold};
-use crate::presentation::format::print_row;
 
 /// CPU metrics collected from the system
 pub struct CpuInfo {

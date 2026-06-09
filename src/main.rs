@@ -23,8 +23,10 @@ use crate::services::{
 };
 
 /// Application version sourced directly from `Cargo.toml`
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const SEP: &str = "─────────────────────────────────────────────────────────";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const APP_NAME: &str = "Rust-CLI-SysInfo";
+
+const SEP: &str = "────────────────────────────────────────────────────────────";
 
 /// `Services` aggregates all data-collection services used by the dashboard
 struct Services {
@@ -81,11 +83,10 @@ impl Services {
     ///
     fn render(&self, data: &CollectedData, colors: &Colors) {
         println!(
-            "  {}{}Rust-CLI-SysInfo{}",
-            colors.bold, colors.cyan, colors.reset
+            "  {}{}{}{}",
+            colors.bold, colors.cyan, APP_NAME, colors.reset
         );
 
-        println!("  {}{}{}", colors.cyan, data.sys.os, colors.reset);
         println!("  {}{}{}", colors.cyan, SEP, colors.reset);
 
         self.sys.render(&data.sys, colors);
@@ -111,10 +112,6 @@ impl Services {
         }
 
         println!("  {}{}{}", colors.cyan, SEP, colors.reset);
-        println!(
-            "{}{}  v{}{}",
-            colors.bold, colors.cyan, VERSION, colors.reset
-        );
     }
 }
 

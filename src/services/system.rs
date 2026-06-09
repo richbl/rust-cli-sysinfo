@@ -5,10 +5,8 @@ use std::path::Path;
 
 use pci_ids::{Device, FromId, Vendor};
 
-use super::Service;
-use crate::core::error::AppError;
+use super::prelude::*;
 use crate::core::utils::{read_first_line, read_hex_u16};
-use crate::presentation::colors::{Colors, Threshold};
 use crate::presentation::format::{format_uptime, print_row};
 
 /// System-level information collected from `/proc`, `/sys`, and `/etc`
@@ -60,9 +58,10 @@ impl Service for SystemService {
         })
     }
 
-    /// `render()` renders hostname, CPU, GPU(s), kernel version, and system uptime
+    /// `render()` renders OS, hostname, CPU, GPU(s), kernel version, and system uptime
     ///
     fn render(&self, sys: &Self::Data, c: &Colors) {
+        print_row("  OS:", &sys.os, &Threshold::None, c);
         print_row("  Hostname:", &sys.hostname, &Threshold::None, c);
 
         print_row(

@@ -1,10 +1,7 @@
 use std::fs;
 use std::io::{self, BufRead};
 
-use super::Service;
-use crate::core::error::AppError;
-use crate::presentation::colors::{Colors, Threshold};
-use crate::presentation::format::print_row;
+use super::prelude::*;
 
 /// Memory usage metrics parsed from `/proc/meminfo`
 pub struct MemInfo {
@@ -75,7 +72,7 @@ impl Service for MemoryService {
     ///
     fn render(&self, mem: &Self::Data, c: &Colors) {
         let mem_str = format!(
-            "{:.1}% ({}MB/{}MB)",
+            "{:.1}% ({}M/{}M)",
             mem.pct,
             mem.used_kb / 1024,
             mem.total_kb / 1024

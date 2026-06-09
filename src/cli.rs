@@ -1,6 +1,8 @@
 use std::io::{self, IsTerminal};
 use std::process;
 
+use crate::{APP_NAME, VERSION};
+
 /// Parsed command-line options for the dashboard
 pub struct Opts {
     pub clear: bool,        // Clear the terminal before displaying output
@@ -38,6 +40,7 @@ impl Opts {
             match arg {
                 lexopt::Arg::Short('n') | lexopt::Arg::Long("no-clear") => clear = false,
                 lexopt::Arg::Short('o') | lexopt::Arg::Long("no-color") => color = false,
+
                 lexopt::Arg::Short('d') | lexopt::Arg::Long("disk") => {
                     disk_mount = parser
                         .value()
@@ -80,9 +83,11 @@ impl Opts {
 ///
 fn print_usage() {
     println!(
-        "\nUsage: {} [OPTIONS]\n\n{}",
+        "\n{} v{}\nUsage: {} [OPTIONS]\n\n{}",
+        APP_NAME,
+        VERSION,
         env!("CARGO_PKG_NAME"),
-        USAGE.trim_start_matches('\n')
+        USAGE.trim_start_matches('\n'),
     );
 }
 

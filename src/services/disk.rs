@@ -1,9 +1,7 @@
 use std::process;
 
-use super::Service;
-use crate::core::error::AppError;
-use crate::presentation::colors::{Colors, Threshold};
-use crate::presentation::format::{format_size, print_row};
+use super::prelude::*;
+use crate::presentation::format::format_size;
 
 /// Disk usage metrics for a single mount point
 pub struct DiskInfo {

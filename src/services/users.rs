@@ -2,15 +2,16 @@ use std::process;
 
 use super::prelude::*;
 
-/// Logged-in user list collected from `who`
+/// `UsersInfo` contains the list of logged-in user list collected from `who`
+#[derive(Default)]
 pub struct UsersInfo {
     pub users: Vec<String>,
 }
 
-/// Service for collecting and rendering currently logged-in users
+/// `UsersService` is a struct for collecting and rendering logged-in users
 pub struct UsersService;
 
-/// Collects and renders currently logged-in users
+/// `UsersService` implements the `Service` trait
 impl Service for UsersService {
     type Data = UsersInfo;
 
@@ -18,7 +19,7 @@ impl Service for UsersService {
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         let Ok(output) = process::Command::new("who").output() else {
-            return Ok(UsersInfo { users: vec![] });
+            return Ok(UsersInfo::default());
         };
 
         let stdout = std::str::from_utf8(&output.stdout).unwrap_or("");
@@ -27,7 +28,6 @@ impl Service for UsersService {
             .filter_map(|l| l.split_whitespace().next().map(String::from))
             .collect();
 
-        // Sort and deduplicate the list of users
         users.sort_unstable();
         users.dedup();
 

@@ -36,7 +36,8 @@ pub fn format_uptime(seconds: u64) -> String {
 /// suffix
 ///
 pub fn format_size(kb: u64) -> String {
-    // Divisors are powers of 1024: 1024³ = TiB, 1024² = GiB, 1024¹ = MiB (all expressed in KB)
+    // Divisors are powers of 1024 (all expressed in KB)
+
     #[allow(clippy::cast_precision_loss)]
     let k = kb as f64;
 

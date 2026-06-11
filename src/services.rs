@@ -1,7 +1,13 @@
-pub mod cpu;
+pub mod cpu_model;
+pub mod cpu_usage;
 pub mod disk;
+pub mod gpu;
+pub mod hostname;
+pub mod kernel;
+pub mod load_avg;
 pub mod memory;
-pub mod system;
+pub mod os_name;
+pub mod uptime;
 pub mod users;
 
 use crate::core::error::AppError;
@@ -16,7 +22,7 @@ pub mod prelude {
     pub use crate::presentation::format::print_row;
 }
 
-/// ` Service` is the common interface implemented by every system information service
+/// `Service` is the common interface implemented by every system information service
 pub trait Service {
     type Data;
 

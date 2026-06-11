@@ -3,30 +3,27 @@ use std::process;
 use super::prelude::*;
 use crate::presentation::format::format_size;
 
-/// Disk usage metrics for a single mount point
+/// `DiskInfo` is a struct containing disk usage metrics for a single mount point
+#[derive(Default)]
 pub struct DiskInfo {
     pub total_kb: u64,
     pub used_kb: u64,
     pub pct: f64,
 }
 
-/// Service for collecting and rendering disk usage for a given mount path
+/// `DiskService` is a struct for collecting and rendering disk usage for a given mount path
 pub struct DiskService {
-    pub mount: String, // The filesystem mount path to report on
+    pub mount: String,
 }
 
-/// Collects and renders disk usage for a given mount path
+/// `DiskService` implements the `Service` trait
 impl Service for DiskService {
     type Data = DiskInfo;
 
     /// `collect()` runs `df -kP` against the configured mount path and returns usage statistics
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let fallback = DiskInfo {
-            total_kb: 0,
-            used_kb: 0,
-            pct: 0.0,
-        };
+        let fallback = DiskInfo::default();
 
         // -k: report sizes in 1K blocks; -P: POSIX portable output format (stable column order)
         let Ok(output) = process::Command::new("df")
@@ -35,17 +32,16 @@ impl Service for DiskService {
         else {
             return Ok(fallback);
         };
+
         if !output.status.success() {
             return Ok(fallback);
         }
 
-        // Skip the header line
         let stdout = std::str::from_utf8(&output.stdout).unwrap_or("");
         let Some(line) = stdout.lines().nth(1) else {
             return Ok(fallback);
         };
 
-        // Split the line into columns
         let cols: Vec<&str> = line.split_whitespace().collect();
         if cols.len() < 6 {
             return Ok(fallback);

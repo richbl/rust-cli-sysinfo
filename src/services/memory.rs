@@ -3,17 +3,18 @@ use std::io::{self, BufRead};
 
 use super::prelude::*;
 
-/// Memory usage metrics parsed from `/proc/meminfo`
+/// ` MemInfo` is a struct containing memory usage metrics parsed from `/proc/meminfo`
+#[derive(Default)]
 pub struct MemInfo {
     pub total_kb: u64,
     pub used_kb: u64,
     pub pct: f64,
 }
 
-/// Service for collecting and rendering physical memory usage
+/// `MemoryService` is a struct for collecting and rendering memory usage
 pub struct MemoryService;
 
-/// Collects and renders memory usage
+/// `MemoryService` implements the `Service` trait
 impl Service for MemoryService {
     type Data = MemInfo;
 
@@ -25,7 +26,6 @@ impl Service for MemoryService {
         let mut available_kb = None;
         let mut free_kb = 0;
 
-        // Parse MemTotal, MemAvailable, and MemFree
         let parse_kb = |line: &str| -> u64 {
             line.split_whitespace()
                 .nth(1)
@@ -77,6 +77,7 @@ impl Service for MemoryService {
             mem.used_kb / 1024,
             mem.total_kb / 1024
         );
+
         print_row(
             "  Memory usage:",
             &mem_str,

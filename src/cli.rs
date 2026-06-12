@@ -28,10 +28,7 @@ impl Opts {
         let mut parser = lexopt::Parser::from_env();
 
         // Parse command-line options
-        while let Some(arg) = parser
-            .next()
-            .unwrap_or_else(|e| fail(&format!("Error: {e}")))
-        {
+        while let Some(arg) = parser.next().unwrap_or_else(|e| fail(&format!("{e}"))) {
             match arg {
                 lexopt::Arg::Short('n') | lexopt::Arg::Long("no-clear") => clear = false,
                 lexopt::Arg::Short('o') | lexopt::Arg::Long("no-color") => color = false,
@@ -109,7 +106,7 @@ fn parse_slot_filter(parser: &mut lexopt::Parser) -> SlotFilter {
 /// `parse_slot_list()` parses a hyphen-separated token string into a `SlotFilter::Custom`
 ///
 fn parse_slot_list(input: &str) -> SlotFilter {
-    let slots = ServiceSlot::parse_list(input).unwrap_or_else(|e| fail(&format!("Error: {e}")));
+    let slots = ServiceSlot::parse_list(input).unwrap_or_else(|e| fail(&e));
     SlotFilter::Custom(slots)
 }
 
@@ -149,8 +146,9 @@ fn print_usage(c: &Colors) {
 /// `fail()` prints an error message with usage instructions and exits
 ///
 fn fail(msg: &str) -> ! {
-    eprintln!("\n{msg}");
-    print_usage(&Colors::new(true));
+    let c = Colors::new(true);
+    eprintln!("\n  {}{}{}", c.red, msg, c.reset);
+    print_usage(&c);
     process::exit(1);
 }
 

@@ -105,14 +105,14 @@ impl Services {
         CollectedData {
             os: active(ServiceSlot::Os).then(|| self.os.collect()),
             hostname: active(ServiceSlot::Hst).then(|| self.hostname.collect()),
-            cpu_model: active(ServiceSlot::CpuM).then(|| self.cpu_model.collect()),
+            cpu_model: active(ServiceSlot::Cpu).then(|| self.cpu_model.collect()),
             gpu: active(ServiceSlot::Gpu).then(|| self.gpu.collect()),
             kernel: active(ServiceSlot::Knl).then(|| self.kernel.collect()),
             uptime: active(ServiceSlot::Upt).then(|| self.uptime.collect()),
             load_avg: active(ServiceSlot::Load).then(|| self.load_avg.collect()),
-            cpu_usage: active(ServiceSlot::Cpu).then(|| self.cpu_usage.collect()),
-            memory: active(ServiceSlot::Ram).then(|| self.memory.collect()),
-            disk: active(ServiceSlot::Dsk).then(|| self.disk.collect()),
+            cpu_usage: active(ServiceSlot::CpuU).then(|| self.cpu_usage.collect()),
+            memory: active(ServiceSlot::RamU).then(|| self.memory.collect()),
+            disk: active(ServiceSlot::DskU).then(|| self.disk.collect()),
             users: active(ServiceSlot::Usr).then(|| self.users.collect()),
         }
     }
@@ -127,7 +127,7 @@ impl Services {
                     self.hostname.render(d, c);
                 });
             }
-            ServiceSlot::CpuM => render_if_ok("CPU model", data.cpu_model.as_ref(), |d| {
+            ServiceSlot::Cpu => render_if_ok("CPU model", data.cpu_model.as_ref(), |d| {
                 self.cpu_model.render(d, c);
             }),
             ServiceSlot::Gpu => render_if_ok("GPU", data.gpu.as_ref(), |d| self.gpu.render(d, c)),
@@ -140,13 +140,13 @@ impl Services {
             ServiceSlot::Load => render_if_ok("Load Average", data.load_avg.as_ref(), |d| {
                 self.load_avg.render(d, c);
             }),
-            ServiceSlot::Cpu => render_if_ok("CPU usage", data.cpu_usage.as_ref(), |d| {
+            ServiceSlot::CpuU => render_if_ok("CPU usage", data.cpu_usage.as_ref(), |d| {
                 self.cpu_usage.render(d, c);
             }),
-            ServiceSlot::Ram => {
+            ServiceSlot::RamU => {
                 render_if_ok("Memory", data.memory.as_ref(), |d| self.memory.render(d, c));
             }
-            ServiceSlot::Dsk => {
+            ServiceSlot::DskU => {
                 render_if_ok("Disk", data.disk.as_ref(), |d| self.disk.render(d, c));
             }
             ServiceSlot::Usr => {
@@ -179,10 +179,10 @@ impl Services {
         println!("\n  {}{}{}\n  {}{}", c.bold, c.cyan, APP_NAME, SEP, c.reset);
 
         println!(
-            "  To configure the services displayed, separate each services token with a\n  hyphen (-) in the desired order.\n"
+            "  To configure the services displayed, separate each service token with a\n  hyphen (-) in the desired order.\n"
         );
 
-        println!("  Available services tokens:\n");
+        println!("  Available service tokens:\n");
 
         // Loop over all services, printing their tokens and descriptions
         for slot in ServiceSlot::ALL {
@@ -197,7 +197,7 @@ impl Services {
         }
 
         println!(
-            "\n  Example:\n    {} -s {}OS-CPUM-GPU-HST-KNL-DSK{} -d /boot/efi\n",
+            "\n  Example:\n    {} -s {}OS-CPU-GPU-HST-KNL-DSKU{} -d /boot/efi",
             env!("CARGO_PKG_NAME"),
             c.cyan,
             c.reset,

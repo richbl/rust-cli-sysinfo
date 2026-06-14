@@ -2,7 +2,6 @@ use super::prelude::*;
 use crate::core::utils::read_first_line;
 
 /// `LoadAvgInfo` contains the system load averages parsed from `/proc/loadavg`
-#[derive(Default)]
 pub struct LoadAvgInfo {
     pub loadavg: Option<(f64, f64, f64)>,
 }

@@ -3,8 +3,7 @@ use std::io::{self, BufRead};
 
 use super::prelude::*;
 
-/// ` MemInfo` is a struct containing memory usage metrics parsed from `/proc/meminfo`
-#[derive(Default)]
+/// `MemInfo` contains memory usage metrics parsed from `/proc/meminfo`
 pub struct MemInfo {
     pub total_kb: u64,
     pub used_kb: u64,

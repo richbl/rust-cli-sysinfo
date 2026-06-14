@@ -8,7 +8,6 @@ use super::prelude::*;
 use crate::core::utils::read_hex_u16;
 
 /// Deduplicated list of GPU display names discovered via `/sys/class/drm`
-#[derive(Default)]
 pub struct GpuInfo {
     pub models: Vec<String>,
 }

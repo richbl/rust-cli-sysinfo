@@ -4,7 +4,6 @@ use std::io::{BufRead, BufReader};
 use super::prelude::*;
 
 /// `OsInfo` contains the OS name parsed from `/etc/os-release`
-#[derive(Default)]
 pub struct OsInfo {
     pub name: String,
 }

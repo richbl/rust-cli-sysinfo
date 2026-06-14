@@ -3,7 +3,6 @@ use crate::core::utils::read_first_line;
 use crate::presentation::format::format_uptime;
 
 /// `UptimeInfo` contains the system uptime in seconds read from `/proc/uptime`
-#[derive(Default)]
 pub struct UptimeInfo {
     pub uptime_secs: Option<u64>,
 }

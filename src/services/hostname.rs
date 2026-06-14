@@ -2,7 +2,6 @@ use super::prelude::*;
 use crate::core::utils::read_first_line;
 
 /// `HostnameInfo` contains the system hostname read from `/proc/sys/kernel/hostname`
-#[derive(Default)]
 pub struct HostnameInfo {
     pub hostname: String,
 }

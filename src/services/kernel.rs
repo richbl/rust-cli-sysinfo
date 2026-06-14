@@ -2,7 +2,6 @@ use super::prelude::*;
 use crate::core::utils::read_first_line;
 
 /// `KernelInfo` contains the kernel version read from `/proc/sys/kernel/osrelease`
-#[derive(Default)]
 pub struct KernelInfo {
     pub version: String,
 }

@@ -4,19 +4,17 @@ use std::time::Duration;
 use super::prelude::*;
 use crate::core::utils::read_first_line;
 
-/// `CpuUsageInfo` contains the instantaneous CPU utilization percentage sampled over a
-/// configurable sampling period
-#[derive(Default)]
+/// `CpuUsageInfo` contains CPU utilization sampled over a configurable sampling period
 pub struct CpuUsageInfo {
     pub usage_pct: Option<f64>,
 }
 
-/// `CpuUsageService` is a struct for collecting and rendering CPU utilization
+/// `CpuUsageService` is used for collecting and rendering CPU utilization
 pub struct CpuUsageService {
     pub sample_ms: u64, // Duration of the sampling in milliseconds
 }
 
-/// `CpuSnap` is a struct containing a single snapshot of aggregate CPU jiffies from `/proc/stat`
+/// `CpuSnap` contains a single snapshot of aggregate CPU jiffies from `/proc/stat`
 struct CpuSnap {
     total: u64,
     idle: u64,

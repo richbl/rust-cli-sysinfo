@@ -10,6 +10,8 @@ pub mod os_name;
 pub mod uptime;
 pub mod users;
 
+use std::any::Any;
+
 use crate::core::error::AppError;
 use crate::presentation::colors::Colors;
 
@@ -33,4 +35,41 @@ pub trait Service {
     /// `render()` formats and prints `data` to stdout using the provided colors
     ///
     fn render(&self, data: &Self::Data, colors: &Colors);
+}
+
+/// `AnyService` is an object-safe, type-erased counterpart to [`Service`]
+///
+pub trait AnyService {
+    /// `collect_erased()` calls the underlying service's `collect()`, boxing the
+    /// successful result as `Box<dyn Any>`
+    ///
+    fn collect_erased(&self) -> Result<Box<dyn Any>, AppError>;
+
+    /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
+    /// and calls `render()`
+    ///
+    fn render_erased(&self, data: &dyn Any, colors: &Colors);
+}
+
+/// Blanket implementation: every [`Service`] is automatically an [`AnyService`]
+impl<S> AnyService for S
+where
+    S: Service,
+    S::Data: 'static,
+{
+    /// `collect_erased()` boxes the successful result of `collect()`
+    ///
+    fn collect_erased(&self) -> Result<Box<dyn Any>, AppError> {
+        self.collect().map(|data| Box::new(data) as Box<dyn Any>)
+    }
+
+    /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
+    /// and calls `render()`
+    ///
+    fn render_erased(&self, data: &dyn Any, colors: &Colors) {
+        let data = data
+            .downcast_ref::<S::Data>()
+            .expect("AnyService: collect/render data type mismatch");
+        self.render(data, colors);
+    }
 }

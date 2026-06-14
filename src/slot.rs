@@ -5,75 +5,80 @@ pub enum SlotFilter {
     Custom(Vec<ServiceSlot>), // `-s TOKENS`: render only the specified slots in the given order
 }
 
-/// `ServiceSlot` identifies each service row in the output
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ServiceSlot {
-    Os,
-    Hst,
-    Cpu,
-    Gpu,
-    Knl,
-    Upt,
-    Load,
-    CpuU,
-    RamU,
-    DskU,
-    Usr,
+/// `SlotMeta` bundles a slot's `-s` token and its human-readable description
+///
+struct SlotMeta {
+    slot: ServiceSlot,
+    token: &'static str,
+    description: &'static str,
+}
+
+/// `define_slots!` generates the `SLOT_TABLE` and `ServiceSlot` enum
+macro_rules! define_slots {
+    ($($variant:ident: $token:literal, $description:literal);* $(;)?) => {
+
+        /// `ServiceSlot` identifies each service row in the output
+        #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        pub enum ServiceSlot {
+            $($variant),*
+        }
+
+        /// The ordered table of all known slots
+        const SLOT_TABLE: &[SlotMeta] = &[
+            $(
+                SlotMeta {
+                    slot: ServiceSlot::$variant,
+                    token: $token,
+                    description: $description,
+                },
+            )*
+        ];
+    }
+}
+
+// `define_slots!` macro generates the `SLOT_TABLE` and `ServiceSlot` enum
+define_slots! {
+    Os:   "OS",   "Operating system name and version";
+    Hst:  "HST",  "System hostname";
+    Cpu:  "CPU",  "CPU model";
+    Gpu:  "GPU",  "GPU model(s)";
+    Knl:  "KNL",  "Linux kernel version";
+    Upt:  "UPT",  "System uptime";
+    Load: "LOAD", "Load averages (1m, 5m, 15m)";
+    CpuU: "CPUU", "CPU usage %";
+    RamU: "RAMU", "Memory usage % (Used/Total)";
+    DskU: "DSKU", "Disk usage % (Used/Total)";
+    Usr:  "USR",  "Current users";
 }
 
 /// `ServiceSlot` methods
 impl ServiceSlot {
+    /// `meta()` looks up this slot's entry in `SLOT_TABLE`
+    ///
+    fn meta(self) -> &'static SlotMeta {
+        SLOT_TABLE
+            .iter()
+            .find(|m| m.slot == self)
+            .expect("every ServiceSlot variant must have a SLOT_TABLE entry")
+    }
+
     /// `token()` returns the token string for this slot (used in `-s` output and parsing)
     ///
-    pub const fn token(self) -> &'static str {
-        match self {
-            Self::Os => "OS",
-            Self::Hst => "HST",
-            Self::Cpu => "CPU",
-            Self::Gpu => "GPU",
-            Self::Knl => "KNL",
-            Self::Upt => "UPT",
-            Self::Load => "LOAD",
-            Self::CpuU => "CPUU",
-            Self::RamU => "RAMU",
-            Self::DskU => "DSKU",
-            Self::Usr => "USR",
-        }
+    pub fn token(self) -> &'static str {
+        self.meta().token
     }
 
-    /// `description()` returns a human-readable description shown next to the token in `-s` labeled
-    /// output
+    /// `description()` returns a description shown next to the token in `-s` labeled output
     ///
-    pub const fn description(self) -> &'static str {
-        match self {
-            Self::Os => "Operating system name and version",
-            Self::Hst => "System hostname",
-            Self::Cpu => "CPU model",
-            Self::Gpu => "GPU model(s)",
-            Self::Knl => "Linux kernel version",
-            Self::Upt => "System uptime",
-            Self::Load => "Load averages (1m, 5m, 15m)",
-            Self::CpuU => "CPU usage %",
-            Self::RamU => "Memory usage % (Used/Total)",
-            Self::DskU => "Disk usage % (Used/Total)",
-            Self::Usr => "Current users",
-        }
+    pub fn description(self) -> &'static str {
+        self.meta().description
     }
 
-    /// The default ordered list of all slots, defining the standard output layout
-    pub const ALL: &'static [Self] = &[
-        Self::Os,
-        Self::Hst,
-        Self::Cpu,
-        Self::Gpu,
-        Self::Knl,
-        Self::Upt,
-        Self::Load,
-        Self::CpuU,
-        Self::RamU,
-        Self::DskU,
-        Self::Usr,
-    ];
+    /// `all()` returns the default ordered list of all slots, defining the standard output layout
+    ///
+    pub fn all() -> Vec<Self> {
+        SLOT_TABLE.iter().map(|m| m.slot).collect()
+    }
 
     /// `parse_list()` parses a hyphen-separated token string (e.g. `"HST-OS-KNL"`) into an
     /// ordered `Vec<ServiceSlot>`
@@ -92,19 +97,6 @@ impl ServiceSlot {
     /// `from_token()` looks up a `ServiceSlot` by its token string (case-insensitive)
     ///
     fn from_token(token: &str) -> Option<Self> {
-        match token {
-            "OS" => Some(Self::Os),
-            "HST" => Some(Self::Hst),
-            "CPU" => Some(Self::Cpu),
-            "GPU" => Some(Self::Gpu),
-            "KNL" => Some(Self::Knl),
-            "UPT" => Some(Self::Upt),
-            "LOAD" => Some(Self::Load),
-            "CPUU" => Some(Self::CpuU),
-            "RAMU" => Some(Self::RamU),
-            "DSKU" => Some(Self::DskU),
-            "USR" => Some(Self::Usr),
-            _ => None,
-        }
+        SLOT_TABLE.iter().find(|m| m.token == token).map(|m| m.slot)
     }
 }

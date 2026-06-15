@@ -2,12 +2,13 @@
 
 **Rust-CLI-Sysinfo** (RCS) is a simple Rust-based system services utility that runs in a Linux terminal, offering a modular and customizable way to display the status of various system services.
 
-![GitHub Release](https://img.shields.io/github/v/release/richbl/rust-cli-sysinfo?include_prereleases&sort=semver&display_name=tag&color=blue)
+![GitHub Release](https://badgen.net/github/tag/richbl/rust-cli-sysinfo?label=release)
 [![Rust Report Card](https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo)](https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623)](https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 <!-- markdownlint-disable MD033 -->
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo">
-  <img alt="Link to Codeberg Mirror" src="https://img.shields.io/badge/Codeberg%20Mirror-Rust--CLI--SysInfo-red?style=flat&logo=codeberg&logoColor=white&labelColor=grey&color=blue&link=https%3A%2F%2Fcodeberg.org%2Frichbl%2Frust-cli-sysinfo">
+  <img alt="Link to Codeberg Mirror" src="https://badgen.net/badge/icon/Rust-CLI-SysInfo?icon=codeberg&label=Codeberg%20Mirror">
 </a>
 <!-- markdownlint-enable MD033 -->
 

@@ -1,0 +1,54 @@
+name: Mirror to Codeberg
+on: [push, delete]
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v6.0.3
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          fetch-depth: 0
+
+      # Replace GitHub project URLs with Codeberg equivalents across ALL branches
+      - name: Replace GitHub URLs with Codeberg URLs in markdown files
+        run: |
+          # Dynamically capture "username/repo" from GitHub environment variables
+          REPO_SLUG="${{ github.repository }}"
+          GITHUB_URL="https://github.com/${REPO_SLUG}"
+          CODEBERG_URL="https://codeberg.org/${REPO_SLUG}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for remote_ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/); do
+            branch="${remote_ref#refs/remotes/origin/}"
+            [ "$branch" = "HEAD" ] && continue
+
+            git checkout --force -B "$branch" "$remote_ref"
+
+            echo "--- Branch: ${branch} ---"
+            echo "wiki/ present: $([ -d wiki ] && echo YES || echo NO)"
+            echo "wiki GitHub URL count: $(find wiki -name '*.md' -exec grep -l "${GITHUB_URL}" {} + 2>/dev/null | wc -l) file(s)"
+
+            [ -f README.md ] && sed -i "s|${GITHUB_URL}|${CODEBERG_URL}|g" README.md
+            [ -d wiki ] && find wiki -name "*.md" \
+              -exec sed -i "s|${GITHUB_URL}|${CODEBERG_URL}|g" {} +
+
+            echo "git status after sed:"
+            git status --porcelain
+
+            git add -A
+            if [ -n "$(git status --porcelain)" ]; then
+              git commit -m "chore: replace GitHub URLs with Codeberg URLs"
+              git update-ref "$remote_ref" HEAD
+              echo "Committed: $(git rev-parse --short HEAD)"
+            else
+              echo "Nothing to commit"
+            fi
+          done
+
+      # Push directly using the token over HTTPS (Replaces pixta-dev action)
+      - name: Push Mirror to Codeberg
+        run: |
+          # Explicitly target our modified local branches to push as remote branches
+          git push --prune https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags

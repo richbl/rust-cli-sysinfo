@@ -47,8 +47,11 @@ jobs:
             fi
           done
 
-      # Push directly using the token over HTTPS (Replaces pixta-dev action)
+      # Push directly using the token over HTTPS
       - name: Push Mirror to Codeberg
         run: |
-          # Explicitly target our modified local branches to push as remote branches
-          git push --prune https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags
+          # Pull latest changes from Codeberg to avoid rejection
+          git pull --rebase https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git
+          
+          # Push all branches and tags
+          git push --force-with-lease --prune https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags

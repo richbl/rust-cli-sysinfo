@@ -45,7 +45,7 @@ jobs:
             else
               echo "Nothing to commit"
             fi
-          done
+          done          
 
       # Push directly using the token over HTTPS
       - name: Push Mirror to Codeberg
@@ -53,5 +53,5 @@ jobs:
           # Pull latest changes from Codeberg to avoid rejection
           git pull --rebase https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git
           
-          # Push all branches and tags
-          git push --force-with-lease --prune https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags
+          # Push all branches and tags with force to handle stale refs
+          git push --force https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags

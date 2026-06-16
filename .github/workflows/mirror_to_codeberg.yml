@@ -50,8 +50,8 @@ jobs:
       # Push directly using the token over HTTPS
       - name: Push Mirror to Codeberg
         run: |
-          # Pull latest changes from Codeberg to avoid rejection
-          git pull --rebase https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git
+          # Fetch latest changes from Codeberg
+          git fetch https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git
           
-          # Push all branches and tags with force to handle stale refs
+          # Force push all branches and tags without rebasing to avoid conflicts
           git push --force https://x-access-token:${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}@codeberg.org/${{ github.repository }}.git "refs/heads/*:refs/heads/*" --tags

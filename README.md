@@ -4,6 +4,7 @@
 <a href="https://github.com/richbl/rust-cli-sysinfo/releases"><img alt="Link to Releases" src="https://badgen.net/github/tag/richbl/rust-cli-sysinfo?icon=github&label=release"></a>
 <a href="https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo"><img alt="Link to Releases" src="https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo"></a>
 <a href="https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img alt="Link to Releases" src="https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=richbl_rust-cli-sysinfo"><img alt="Link to SonarCloud Report" src="https://sonarcloud.io/api/project_badges/measure?project=richbl_rust-cli-sysinfo&metric=alert_status"></a>
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo"><img alt="Link to Codeberg Mirror" src="https://badgen.net/badge/icon/Rust-CLI-SysInfo?icon=codeberg&label=codeberg%20mirror"></a>
 <!-- markdownlint-enable MD033 -->
 

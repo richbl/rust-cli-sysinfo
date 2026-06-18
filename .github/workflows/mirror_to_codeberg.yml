@@ -4,7 +4,7 @@
 #
 # SETUP (do this once per repository):
 #   1. Create a Codeberg access token with write access to the target repo
-#   2. Add it as a repository (or organisation) secret named CODEBERG_ACCESS_TOKEN
+#   2. Add it as a repository (or organisation) secret named CODEBERG_GLOBAL_ACCESS_TOKEN
 #   3. Copy this file to .github/workflows/ — no other edits are required
 #
 # HOW IT WORKS:
@@ -49,7 +49,7 @@ jobs:
     # -------------------------------------------------------------------------
     env:
       CODEBERG_HOST: codeberg.org
-      CODEBERG_TOKEN: ${{ secrets.CODEBERG_ACCESS_TOKEN }}
+      CODEBERG_TOKEN: ${{ secrets.CODEBERG_GLOBAL_ACCESS_TOKEN }}
       
       # Derived from GitHub context — no hard-coding required
       REPO_SLUG:     ${{ github.repository }}

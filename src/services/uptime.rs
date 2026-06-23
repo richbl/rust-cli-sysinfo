@@ -39,3 +39,43 @@ impl Service for UptimeService {
         print_row("  Uptime:", &uptime_str, &Threshold::None, c);
     }
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use super::*;
+    use crate::presentation::colors::Colors;
+
+    #[test]
+    /// `collect_returns_ok_with_some_uptime()` asserts that uptime collection succeeds and returns
+    /// uptime value on Linux
+    ///
+    fn collect_returns_ok_with_some_uptime() {
+        let result = UptimeService.collect();
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert!(
+            data.uptime_secs.is_some(),
+            "uptime_secs must be Some on a running Linux system"
+        );
+    }
+
+    #[test]
+    /// `uptime_is_positive()` asserts that the system uptime is positive
+    ///
+    fn uptime_is_positive() {
+        let data = UptimeService.collect().unwrap();
+        assert!(
+            data.uptime_secs.unwrap() > 0,
+            "uptime must be > 0 on a running system"
+        );
+    }
+
+    #[test]
+    /// `render_does_not_panic()` asserts that rendering uptime does not panic
+    ///
+    fn render_does_not_panic() {
+        let data = UptimeService.collect().unwrap();
+        UptimeService.render(&data, &Colors::new(false));
+    }
+}

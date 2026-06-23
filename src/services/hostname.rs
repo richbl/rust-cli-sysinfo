@@ -27,3 +27,33 @@ impl Service for HostnameService {
         print_row("  Hostname:", &data.hostname, &Threshold::None, c);
     }
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use super::*;
+    use crate::presentation::colors::Colors;
+
+    #[test]
+    /// `collect_returns_ok_with_non_empty_hostname()` asserts that hostname collection succeeds
+    /// and returns a non-empty hostname
+    ///
+    fn collect_returns_ok_with_non_empty_hostname() {
+        let result = HostnameService.collect();
+        assert!(result.is_ok(), "collect() must not error on Linux");
+        let data = result.unwrap();
+        assert!(
+            !data.hostname.is_empty(),
+            "hostname must not be empty on a running Linux system"
+        );
+    }
+
+    #[test]
+    /// `render_does_not_panic()` asserts that rendering hostname does not panic
+    ///
+    fn render_does_not_panic() {
+        let data = HostnameService.collect().unwrap();
+        // render() writes to stdout; we just verify it does not panic
+        HostnameService.render(&data, &Colors::new(false));
+    }
+}

@@ -6,10 +6,8 @@ use std::io;
 pub enum AppError {
     /// Wraps a standard I/O error (e.g., file not found, permission denied)
     Io(io::Error),
-    #[allow(dead_code)]
     /// Returned when a value cannot be parsed from its raw string representation
     Parse(String),
-    #[allow(dead_code)]
     /// Returned when an expected data source is absent or returns no usable content
     DataUnavailable(String),
 }

@@ -22,7 +22,7 @@ impl Service for GpuService {
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         Ok(GpuInfo {
-            models: collect_gpu_models(),
+            models: collect_gpu_models()?,
         })
     }
 
@@ -41,12 +41,10 @@ impl Service for GpuService {
 
 /// `collect_gpu_models()` discovers GPU display names by scanning `/sys/class/drm` card entries
 ///
-fn collect_gpu_models() -> Vec<String> {
+fn collect_gpu_models() -> Result<Vec<String>, AppError> {
     let mut names = BTreeSet::new();
 
-    let Ok(entries) = fs::read_dir("/sys/class/drm") else {
-        return Vec::new();
-    };
+    let entries = fs::read_dir("/sys/class/drm").map_err(AppError::Io)?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -60,12 +58,13 @@ fn collect_gpu_models() -> Vec<String> {
             continue;
         }
 
+        // Skip individual cards that fail to parse, but don't fail the whole collection
         if let Some(name) = gpu_name_from_card(&path) {
             names.insert(name);
         }
     }
 
-    names.into_iter().collect()
+    Ok(names.into_iter().collect())
 }
 
 /// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device IDs

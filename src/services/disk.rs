@@ -23,32 +23,41 @@ impl Service for DiskService {
     /// `collect()` runs `df -kP` against the configured mount path and returns usage statistics
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let fallback = DiskInfo::default();
-
         // -k: report sizes in 1K blocks; -P: POSIX portable output format (stable column order)
-        let Ok(output) = process::Command::new("df")
+        let output = process::Command::new("df")
             .args(["-kP", &self.mount])
             .output()
-        else {
-            return Ok(fallback);
-        };
+            .map_err(AppError::Io)?;
 
         if !output.status.success() {
-            return Ok(fallback);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(AppError::DataUnavailable(format!(
+                "df failed for {}: {}",
+                self.mount,
+                stderr.trim()
+            )));
         }
 
-        let stdout = std::str::from_utf8(&output.stdout).unwrap_or("");
-        let Some(line) = stdout.lines().nth(1) else {
-            return Ok(fallback);
-        };
+        let stdout = std::str::from_utf8(&output.stdout)
+            .map_err(|e| AppError::Parse(format!("Invalid UTF-8 in df output: {e}")))?;
+        let line = stdout
+            .lines()
+            .nth(1)
+            .ok_or_else(|| AppError::Parse("df output missing data line".into()))?;
 
         let cols: Vec<&str> = line.split_whitespace().collect();
         if cols.len() < 6 {
-            return Ok(fallback);
+            return Err(AppError::Parse(format!(
+                "Unexpected df output format: {line}"
+            )));
         }
 
-        let total_kb: u64 = cols[1].parse().unwrap_or(0);
-        let used_kb: u64 = cols[2].parse().unwrap_or(0);
+        let total_kb: u64 = cols[1]
+            .parse()
+            .map_err(|_| AppError::Parse(format!("Failed to parse df total_kb: {}", cols[1])))?;
+        let used_kb: u64 = cols[2]
+            .parse()
+            .map_err(|_| AppError::Parse(format!("Failed to parse df used_kb: {}", cols[2])))?;
 
         #[allow(clippy::cast_precision_loss)]
         let pct = if total_kb > 0 {

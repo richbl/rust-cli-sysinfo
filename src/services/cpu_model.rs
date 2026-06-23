@@ -52,3 +52,40 @@ fn read_cpu_model() -> Option<String> {
 
     None
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use super::*;
+    use crate::presentation::colors::Colors;
+
+    #[test]
+    /// `collect_returns_ok_on_linux()` asserts that CPU model collection succeeds on a Linux
+    /// system
+    ///
+    fn collect_returns_ok_on_linux() {
+        let result = CpuModelService.collect();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    /// `model_name_is_some_and_non_empty()` asserts that CPU model name is retrieved and is
+    /// non-empty
+    ///
+    fn model_name_is_some_and_non_empty() {
+        let data = CpuModelService.collect().unwrap();
+        assert!(
+            data.model.is_some(),
+            "model name must be present on a CPU-bearing Linux system"
+        );
+        assert!(!data.model.unwrap().is_empty());
+    }
+
+    #[test]
+    /// `render_does_not_panic()` asserts that rendering CPU model info does not panic
+    ///
+    fn render_does_not_panic() {
+        let data = CpuModelService.collect().unwrap();
+        CpuModelService.render(&data, &Colors::new(false));
+    }
+}

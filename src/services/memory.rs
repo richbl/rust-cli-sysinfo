@@ -89,3 +89,55 @@ impl Service for MemoryService {
         );
     }
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use super::*;
+    use crate::presentation::colors::Colors;
+
+    #[test]
+    /// `collect_returns_ok_with_positive_total()` asserts that memory collection succeeds with a
+    /// total memory > 0
+    ///
+    fn collect_returns_ok_with_positive_total() {
+        let result = MemoryService.collect();
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert!(data.total_kb > 0, "total memory must be > 0 on Linux");
+    }
+
+    #[test]
+    /// `used_does_not_exceed_total()` asserts that used memory does not exceed total memory
+    ///
+    fn used_does_not_exceed_total() {
+        let data = MemoryService.collect().unwrap();
+        assert!(
+            data.used_kb <= data.total_kb,
+            "used ({}) must not exceed total ({})",
+            data.used_kb,
+            data.total_kb
+        );
+    }
+
+    #[test]
+    /// `percentage_is_in_valid_range()` asserts that memory usage percentage is in the range
+    /// [0.0, 100.0]
+    ///
+    fn percentage_is_in_valid_range() {
+        let data = MemoryService.collect().unwrap();
+        assert!(
+            (0.0..=100.0).contains(&data.pct),
+            "memory pct {:.1} is outside [0, 100]",
+            data.pct
+        );
+    }
+
+    #[test]
+    /// `render_does_not_panic()` asserts that rendering memory info does not panic
+    ///
+    fn render_does_not_panic() {
+        let data = MemoryService.collect().unwrap();
+        MemoryService.render(&data, &Colors::new(false));
+    }
+}

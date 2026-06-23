@@ -18,11 +18,21 @@ impl Service for UsersService {
     /// `collect()` runs `who` and returns a sorted, deduplicated list of usernames
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let Ok(output) = process::Command::new("who").output() else {
-            return Ok(UsersInfo::default());
-        };
+        let output = process::Command::new("who")
+            .output()
+            .map_err(AppError::Io)?;
 
-        let stdout = std::str::from_utf8(&output.stdout).unwrap_or("");
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(AppError::DataUnavailable(format!(
+                "who command failed: {}",
+                stderr.trim()
+            )));
+        }
+
+        let stdout = std::str::from_utf8(&output.stdout)
+            .map_err(|e| AppError::Parse(format!("Invalid UTF-8 in who output: {e}")))?;
+
         let mut users: Vec<String> = stdout
             .lines()
             .filter_map(|l| l.split_whitespace().next().map(String::from))

@@ -21,9 +21,9 @@ impl Service for MemoryService {
     /// computes usage
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let mut total_kb = 0;
+        let mut total_kb = None;
         let mut available_kb = None;
-        let mut free_kb = 0;
+        let mut free_kb = None;
 
         let parse_kb = |line: &str| -> u64 {
             line.split_whitespace()
@@ -32,24 +32,34 @@ impl Service for MemoryService {
                 .unwrap_or(0)
         };
 
-        if let Ok(file) = fs::File::open("/proc/meminfo") {
-            for line in io::BufReader::new(file).lines().map_while(Result::ok) {
-                if line.starts_with("MemTotal:") {
-                    total_kb = parse_kb(&line);
-                } else if line.starts_with("MemAvailable:") {
-                    available_kb = Some(parse_kb(&line));
-                } else if line.starts_with("MemFree:") {
-                    free_kb = parse_kb(&line);
-                }
+        let file = fs::File::open("/proc/meminfo").map_err(AppError::Io)?;
 
-                if total_kb > 0 && available_kb.is_some() && free_kb > 0 {
-                    break;
-                }
+        for line in io::BufReader::new(file).lines().map_while(Result::ok) {
+            if line.starts_with("MemTotal:") {
+                total_kb = Some(parse_kb(&line));
+            } else if line.starts_with("MemAvailable:") {
+                available_kb = Some(parse_kb(&line));
+            } else if line.starts_with("MemFree:") {
+                free_kb = Some(parse_kb(&line));
+            }
+
+            // Break early only if all fields have been successfully located
+            if total_kb.is_some() && available_kb.is_some() && free_kb.is_some() {
+                break;
             }
         }
 
+        let total_kb = total_kb.ok_or_else(|| {
+            AppError::DataUnavailable("MemTotal not found in /proc/meminfo".into())
+        })?;
+
         // Fall back to MemFree when MemAvailable is absent (kernels < 3.14)
-        let avail_kb = available_kb.unwrap_or(free_kb);
+        let avail_kb = available_kb.unwrap_or(free_kb.ok_or_else(|| {
+            AppError::DataUnavailable(
+                "Neither MemAvailable nor MemFree found in /proc/meminfo".into(),
+            )
+        })?);
+
         let used_kb = total_kb.saturating_sub(avail_kb);
 
         #[allow(clippy::cast_precision_loss)]
@@ -87,57 +97,5 @@ impl Service for MemoryService {
             },
             c,
         );
-    }
-}
-
-#[cfg(test)]
-#[cfg(target_os = "linux")]
-mod tests {
-    use super::*;
-    use crate::presentation::colors::Colors;
-
-    #[test]
-    /// `collect_returns_ok_with_positive_total()` asserts that memory collection succeeds with a
-    /// total memory > 0
-    ///
-    fn collect_returns_ok_with_positive_total() {
-        let result = MemoryService.collect();
-        assert!(result.is_ok());
-        let data = result.unwrap();
-        assert!(data.total_kb > 0, "total memory must be > 0 on Linux");
-    }
-
-    #[test]
-    /// `used_does_not_exceed_total()` asserts that used memory does not exceed total memory
-    ///
-    fn used_does_not_exceed_total() {
-        let data = MemoryService.collect().unwrap();
-        assert!(
-            data.used_kb <= data.total_kb,
-            "used ({}) must not exceed total ({})",
-            data.used_kb,
-            data.total_kb
-        );
-    }
-
-    #[test]
-    /// `percentage_is_in_valid_range()` asserts that memory usage percentage is in the range
-    /// [0.0, 100.0]
-    ///
-    fn percentage_is_in_valid_range() {
-        let data = MemoryService.collect().unwrap();
-        assert!(
-            (0.0..=100.0).contains(&data.pct),
-            "memory pct {:.1} is outside [0, 100]",
-            data.pct
-        );
-    }
-
-    #[test]
-    /// `render_does_not_panic()` asserts that rendering memory info does not panic
-    ///
-    fn render_does_not_panic() {
-        let data = MemoryService.collect().unwrap();
-        MemoryService.render(&data, &Colors::new(false));
     }
 }

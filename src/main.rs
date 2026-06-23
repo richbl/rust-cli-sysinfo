@@ -170,7 +170,19 @@ fn render_services(
             Ok(data) => find_entry(registry, id)
                 .service
                 .render_erased(data.as_ref(), colors),
-            Err(_) => eprintln!("Warning: Failed to collect {} metrics", id.token()),
+            Err(e) => {
+                // Use the slot's token as the label since we don't have the exact string
+                // (e.g., "  DSKU:" instead of "  Disk usage:") to avoid duplicating labels.
+                let label = format!("  {}:", id.token());
+                let error_value = format!("unavailable ({e})");
+
+                crate::presentation::format::print_row(
+                    &label,
+                    &error_value,
+                    &crate::presentation::colors::Threshold::None,
+                    colors,
+                );
+            }
         }
     }
 

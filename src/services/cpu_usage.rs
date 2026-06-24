@@ -2,6 +2,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::prelude::*;
+use crate::constants::{CPU_CRIT_PCT, CPU_WARN_PCT};
 use crate::core::utils::read_first_line;
 
 /// `CpuUsageInfo` contains CPU utilization sampled over a configurable sampling period
@@ -42,8 +43,8 @@ impl Service for CpuUsageService {
                     format!("{v:.1}%"),
                     Threshold::Check {
                         value: v,
-                        warn: 70.0,
-                        crit: 90.0,
+                        warn: CPU_WARN_PCT,
+                        crit: CPU_CRIT_PCT,
                     },
                 )
             },

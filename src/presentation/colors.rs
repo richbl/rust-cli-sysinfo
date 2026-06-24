@@ -1,3 +1,5 @@
+use crate::constants::{BOLD, CYAN, GREEN, RED, RESET, YELLOW};
+
 /// ANSI escape sequences for terminal color output
 ///
 pub struct Colors {
@@ -16,15 +18,16 @@ impl Colors {
     /// `new` creates a `Colors` instance with ANSI codes when `enabled` is `true`, or empty
     /// strings otherwise
     ///
+    #[must_use]
     pub const fn new(enabled: bool) -> Self {
         if enabled {
             Self {
-                red: "\x1b[0;31m",
-                green: "\x1b[0;32m",
-                yellow: "\x1b[0;33m",
-                cyan: "\x1b[0;36m",
-                bold: "\x1b[1m",
-                reset: "\x1b[0m",
+                red: RED,
+                green: GREEN,
+                yellow: YELLOW,
+                cyan: CYAN,
+                bold: BOLD,
+                reset: RESET,
             }
         } else {
             Self {
@@ -37,12 +40,6 @@ impl Colors {
             }
         }
     }
-}
-
-/// `Threshold` controls value-based color thresholds for utility rows
-pub enum Threshold {
-    None, // No threshold check; the row is rendered in the default color
-    Check { value: f64, warn: f64, crit: f64 }, // Apply thresholds: yellow at `warn`, red at `crit`
 }
 
 #[cfg(test)]
@@ -101,35 +98,5 @@ mod tests {
         assert!(c.cyan.is_empty(), "cyan should be empty when disabled");
         assert!(c.bold.is_empty(), "bold should be empty when disabled");
         assert!(c.reset.is_empty(), "reset should be empty when disabled");
-    }
-
-    // Threshold variants test
-
-    #[test]
-    /// `threshold_none_is_constructible()` asserts that the `Threshold::None` variant is
-    /// constructible
-    ///
-    fn threshold_none_is_constructible() {
-        assert!(matches!(Threshold::None, Threshold::None));
-    }
-
-    #[test]
-    /// `threshold_check_stores_all_fields()` asserts that `Threshold::Check` correctly stores its
-    /// parameters
-    ///
-    fn threshold_check_stores_all_fields() {
-        let t = Threshold::Check {
-            value: 42.0,
-            warn: 70.0,
-            crit: 90.0,
-        };
-        // Verify pattern-match access to all fields
-        if let Threshold::Check { value, warn, crit } = t {
-            assert!((value - 42.0).abs() < f64::EPSILON);
-            assert!((warn - 70.0).abs() < f64::EPSILON);
-            assert!((crit - 90.0).abs() < f64::EPSILON);
-        } else {
-            panic!("expected Threshold::Check");
-        }
     }
 }

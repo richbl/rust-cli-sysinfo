@@ -64,18 +64,21 @@ impl ServiceSlot {
 
     /// `token()` returns the token string for this slot (used in `-s` output and parsing)
     ///
+    #[must_use]
     pub fn token(self) -> &'static str {
         self.meta().token
     }
 
     /// `description()` returns a description shown next to the token in `-s` labeled output
     ///
+    #[must_use]
     pub fn description(self) -> &'static str {
         self.meta().description
     }
 
     /// `all()` returns the default ordered list of all slots, defining the standard output layout
     ///
+    #[must_use]
     pub fn all() -> Vec<Self> {
         SLOT_TABLE.iter().map(|m| m.slot).collect()
     }
@@ -84,6 +87,10 @@ impl ServiceSlot {
     /// ordered `Vec<ServiceSlot>`
     ///
     pub fn parse_list(input: &str) -> Result<Vec<Self>, String> {
+        if input.trim().is_empty() {
+            return Err("service token list cannot be empty".to_string());
+        }
+
         input
             .split('-')
             .map(|raw| {
@@ -283,6 +290,7 @@ mod tests {
     fn parse_list_empty_string_returns_err() {
         let result = ServiceSlot::parse_list("");
         assert!(result.is_err(), "empty input must not silently succeed");
+        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
     }
 
     #[test]
@@ -292,6 +300,7 @@ mod tests {
     fn parse_list_whitespace_only_returns_err() {
         let result = ServiceSlot::parse_list("   ");
         assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
     }
 
     #[test]

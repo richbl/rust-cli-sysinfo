@@ -2,6 +2,7 @@
 //! Displays metrics natively from Linux-based system calls
 
 mod cli;
+mod constants;
 mod core;
 mod presentation;
 mod services;
@@ -12,9 +13,10 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 
 use crate::cli::Opts;
+use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, SEP};
 use crate::core::error::AppError;
-use crate::presentation::colors::{Colors, Threshold};
-use crate::presentation::format::print_row;
+use crate::presentation::colors::Colors;
+use crate::presentation::format::{Threshold, print_row};
 use crate::services::AnyService;
 use crate::services::cpu_model::CpuModelService;
 use crate::services::cpu_usage::CpuUsageService;
@@ -29,28 +31,21 @@ use crate::services::uptime::UptimeService;
 use crate::services::users::UsersService;
 use crate::slot::{ServiceSlot, SlotFilter};
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const APP_NAME: &str = "Rust-CLI-SysInfo";
-pub const SEP: &str =
-    "────────────────────────────────────────────────────────────────────────────────";
-
 /// `CollectResult` is the type-erased result of a single service's `collect()` call
-type CollectResult = Result<Box<dyn Any>, AppError>;
+type CollectResult = Result<Box<dyn Any + Send>, AppError>;
 
 /// `ServiceEntry` pairs a [`ServiceSlot`] identifier with its type-erased service
 /// implementation
 struct ServiceEntry {
-    id: ServiceSlot,
     service: Box<dyn AnyService>,
 }
 
 /// `ServiceEntry` implements `AnyService` via `Box<AnyService>`
 impl ServiceEntry {
-    /// `new()` boxes `service` behind the [`AnyService`] trait, pairing it with `id`
+    /// `new()` boxes `service` behind the [`AnyService`] trait
     ///
-    fn new(id: ServiceSlot, service: impl AnyService + 'static) -> Self {
+    fn new(service: impl AnyService + 'static) -> Self {
         Self {
-            id,
             service: Box::new(service),
         }
     }
@@ -62,36 +57,31 @@ impl ServiceEntry {
 /// When adding/removing services, this is the one location in this file that needs to change...
 /// Also, one entry in `slot::SLOT_TABLE` needs to be added and a new module created
 /// under `services/`
-fn build_registry(opts: &Opts) -> Vec<ServiceEntry> {
-    vec![
-        ServiceEntry::new(ServiceSlot::Os, OsService),
-        ServiceEntry::new(ServiceSlot::Hst, HostnameService),
-        ServiceEntry::new(ServiceSlot::Cpu, CpuModelService),
-        ServiceEntry::new(ServiceSlot::Gpu, GpuService),
-        ServiceEntry::new(ServiceSlot::Knl, KernelService),
-        ServiceEntry::new(ServiceSlot::Upt, UptimeService),
-        ServiceEntry::new(ServiceSlot::Load, LoadAvgService),
-        ServiceEntry::new(
-            ServiceSlot::CpuU,
-            CpuUsageService {
-                sample_ms: opts.cpu_sample_ms,
-            },
-        ),
-        ServiceEntry::new(ServiceSlot::RamU, MemoryService),
-        ServiceEntry::new(
-            ServiceSlot::DskU,
-            DiskService {
-                mount: opts.disk_mount.clone(),
-            },
-        ),
-        ServiceEntry::new(ServiceSlot::Usr, UsersService),
-    ]
-}
-
-/// `find_entry()` returns the registry entry for `id`, or `None` if no entry is registered
 ///
-fn find_entry(registry: &[ServiceEntry], id: ServiceSlot) -> Option<&ServiceEntry> {
-    registry.iter().find(|entry| entry.id == id)
+fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
+    let mut map = HashMap::new();
+    map.insert(ServiceSlot::Os, ServiceEntry::new(OsService));
+    map.insert(ServiceSlot::Hst, ServiceEntry::new(HostnameService));
+    map.insert(ServiceSlot::Cpu, ServiceEntry::new(CpuModelService));
+    map.insert(ServiceSlot::Gpu, ServiceEntry::new(GpuService));
+    map.insert(ServiceSlot::Knl, ServiceEntry::new(KernelService));
+    map.insert(ServiceSlot::Upt, ServiceEntry::new(UptimeService));
+    map.insert(ServiceSlot::Load, ServiceEntry::new(LoadAvgService));
+    map.insert(
+        ServiceSlot::CpuU,
+        ServiceEntry::new(CpuUsageService {
+            sample_ms: opts.cpu_sample_ms,
+        }),
+    );
+    map.insert(ServiceSlot::RamU, ServiceEntry::new(MemoryService));
+    map.insert(
+        ServiceSlot::DskU,
+        ServiceEntry::new(DiskService {
+            mount: opts.disk_mount.clone(),
+        }),
+    );
+    map.insert(ServiceSlot::Usr, ServiceEntry::new(UsersService));
+    map
 }
 
 /// `render_service_error()` prints a standard error row for a slot whose data could
@@ -141,13 +131,13 @@ fn render_labeled(c: &Colors) {
 ///
 fn collect_services(
     active_slots: &[ServiceSlot],
-    registry: &[ServiceEntry],
+    registry: &HashMap<ServiceSlot, ServiceEntry>,
 ) -> HashMap<ServiceSlot, CollectResult> {
     let mut collected: HashMap<ServiceSlot, CollectResult> = HashMap::new();
 
     for &id in active_slots {
         collected.entry(id).or_insert_with(|| {
-            find_entry(registry, id).map_or_else(
+            registry.get(&id).map_or_else(
                 || {
                     Err(AppError::DataUnavailable(format!(
                         "no registry entry for slot '{}'",
@@ -167,7 +157,7 @@ fn collect_services(
 ///
 fn render_services(
     active_slots: &[ServiceSlot],
-    registry: &[ServiceEntry],
+    registry: &HashMap<ServiceSlot, ServiceEntry>,
     collected: &HashMap<ServiceSlot, CollectResult>,
     colors: &Colors,
 ) {
@@ -189,7 +179,7 @@ fn render_services(
         match result {
             Err(e) => render_service_error(id, e, colors),
             Ok(data) => {
-                let Some(entry) = find_entry(registry, id) else {
+                let Some(entry) = registry.get(&id) else {
                     render_service_error(
                         id,
                         &AppError::DataUnavailable("no registry entry".into()),
@@ -227,7 +217,7 @@ fn main() {
     };
 
     if opts.clear {
-        print!("\x1bc");
+        print!("{CLEAR_SCREEN}");
     }
 
     print!(
@@ -240,9 +230,9 @@ fn main() {
     let collected = collect_services(&active_slots, &registry);
 
     if opts.clear {
-        println!("\x1bc");
+        println!("{CLEAR_SCREEN}");
     } else {
-        print!("\r\x1b[2K");
+        print!("{CLEAR_LINE}");
     }
 
     render_services(&active_slots, &registry, &collected, &colors);

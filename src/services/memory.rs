@@ -2,6 +2,7 @@ use std::fs;
 use std::io::{self, BufRead};
 
 use super::prelude::*;
+use crate::constants::{MEM_CRIT_PCT, MEM_WARN_PCT};
 
 /// `MemInfo` contains memory usage metrics parsed from `/proc/meminfo`
 pub struct MemInfo {
@@ -92,8 +93,8 @@ impl Service for MemoryService {
             &mem_str,
             &Threshold::Check {
                 value: mem.pct,
-                warn: 75.0,
-                crit: 90.0,
+                warn: MEM_WARN_PCT,
+                crit: MEM_CRIT_PCT,
             },
             c,
         );

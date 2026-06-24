@@ -1,6 +1,7 @@
 use std::process;
 
 use super::prelude::*;
+use crate::constants::{DISK_CRIT_PCT, DISK_WARN_PCT};
 use crate::presentation::format::format_size;
 
 /// `DiskInfo` is a struct containing disk usage metrics for a single mount point
@@ -72,7 +73,6 @@ impl Service for DiskService {
             pct,
         })
     }
-
     /// `render()` renders disk usage as a percentage with used/total sizes and threshold-based
     /// color coding
     ///
@@ -91,8 +91,8 @@ impl Service for DiskService {
                 text,
                 Threshold::Check {
                     value: disk.pct,
-                    warn: 80.0,
-                    crit: 95.0,
+                    warn: DISK_WARN_PCT,
+                    crit: DISK_CRIT_PCT,
                 },
             )
         };

@@ -48,7 +48,8 @@ pub trait AnyService {
     /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
     /// and calls `render()`
     ///
-    fn render_erased(&self, data: &dyn Any, colors: &Colors);
+    #[must_use = "a type mismatch produces Err; callers must handle the failure case"]
+    fn render_erased(&self, data: &dyn Any, colors: &Colors) -> Result<(), AppError>;
 }
 
 /// Blanket implementation: every [`Service`] is automatically an [`AnyService`]
@@ -63,13 +64,151 @@ where
         self.collect().map(|data| Box::new(data) as Box<dyn Any>)
     }
 
-    /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
-    /// and calls `render()`
+    /// `render_erased()` downcasts `data` to `S::Data` and calls `render()`
     ///
-    fn render_erased(&self, data: &dyn Any, colors: &Colors) {
-        let data = data
-            .downcast_ref::<S::Data>()
-            .expect("AnyService: collect/render data type mismatch");
-        self.render(data, colors);
+    fn render_erased(&self, data: &dyn Any, colors: &Colors) -> Result<(), AppError> {
+        let typed = data.downcast_ref::<S::Data>().ok_or_else(|| {
+            AppError::DataUnavailable(format!(
+                "render type mismatch: expected {}, got incompatible Any",
+                std::any::type_name::<S::Data>()
+            ))
+        })?;
+
+        self.render(typed, colors);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::presentation::colors::Colors;
+
+    // `DoubleService` and `DoubleData` are defined only to exercise the blanket
+    // `AnyService` impl without pulling in any real system service
+    struct DoubleData;
+    struct DoubleService;
+
+    impl Service for DoubleService {
+        type Data = DoubleData;
+
+        fn collect(&self) -> Result<Self::Data, AppError> {
+            Ok(DoubleData)
+        }
+
+        fn render(&self, _data: &Self::Data, _colors: &Colors) {
+            // no-op: render output goes to stdout; only the Result matters here
+        }
+    }
+
+    /// `collect_erased_returns_ok` asserts that `collect_erased` returns `Ok`
+    ///
+    #[test]
+    fn collect_erased_returns_ok() {
+        let result = DoubleService.collect_erased();
+        assert!(
+            result.is_ok(),
+            "collect_erased must not fail for a healthy service"
+        );
+    }
+
+    /// `collect_erased_boxes_correct_type` asserts that `collect_erased` boxes
+    /// the correct type
+    ///
+    #[test]
+    fn collect_erased_boxes_correct_type() {
+        let boxed = DoubleService.collect_erased().unwrap();
+        assert!(
+            boxed.downcast_ref::<DoubleData>().is_some(),
+            "boxed value must downcast to DoubleData"
+        );
+    }
+
+    /// `collect_erased_does_not_downcast_to_wrong_type` asserts that
+    /// `collect_erased` does not downcast to the wrong type
+    ///
+    #[test]
+    fn collect_erased_does_not_downcast_to_wrong_type() {
+        let boxed = DoubleService.collect_erased().unwrap();
+        assert!(
+            boxed.downcast_ref::<u32>().is_none(),
+            "boxed DoubleData must not downcast to u32"
+        );
+    }
+
+    // render_erased: happy path test
+
+    /// `render_erased_correct_type_returns_ok` asserts that `render_erased` returns
+    /// `Ok` when passed the correct type
+    ///
+    #[test]
+    fn render_erased_correct_type_returns_ok() {
+        let data: Box<dyn Any> = Box::new(DoubleData);
+        let result = DoubleService.render_erased(data.as_ref(), &Colors::new(false));
+        assert!(result.is_ok(), "render with the correct type must succeed");
+    }
+
+    /// `round_trip_collect_then_render_erased_succeeds` asserts that
+    /// `render_erased` succeeds when passed the result of `collect_erased`
+    ///
+    #[test]
+    fn round_trip_collect_then_render_erased_succeeds() {
+        // Simulates the normal collect_services → render_services pipeline
+        let collected = DoubleService
+            .collect_erased()
+            .expect("collect must not fail");
+        let result = DoubleService.render_erased(collected.as_ref(), &Colors::new(false));
+        assert!(
+            result.is_ok(),
+            "a correct collect→render round-trip must always succeed"
+        );
+    }
+
+    // render_erased: type mismatch test
+
+    /// `render_erased_wrong_type_returns_err_not_panics` asserts that `render_erased`
+    /// returns `Err` when passed the wrong type
+    ///
+    #[test]
+    fn render_erased_wrong_type_returns_err_not_panics() {
+        let wrong: Box<dyn Any> = Box::new("this is not DoubleData");
+        let result = DoubleService.render_erased(wrong.as_ref(), &Colors::new(false));
+        assert!(
+            result.is_err(),
+            "a type mismatch must produce Err, not a panic"
+        );
+    }
+
+    /// `render_erased_type_mismatch_produces_data_unavailable` asserts that
+    /// `render_erased` returns `DataUnavailable` when passed the wrong type
+    ///
+    #[test]
+    fn render_erased_type_mismatch_produces_data_unavailable() {
+        let wrong: Box<dyn Any> = Box::new(99_u8);
+        let err = DoubleService
+            .render_erased(wrong.as_ref(), &Colors::new(false))
+            .unwrap_err();
+        assert!(
+            matches!(err, AppError::DataUnavailable(_)),
+            "type mismatch must produce DataUnavailable, got: {err}"
+        );
+    }
+
+    /// `render_erased_error_message_names_expected_type` asserts that the error
+    /// message names the expected type
+    ///
+    #[test]
+    fn render_erased_error_message_names_expected_type() {
+        // The error message must identify the expected type so the wiring mistake
+        // is immediately actionable for the developer who sees it.
+        let wrong: Box<dyn Any> = Box::new(99_u8);
+        let err = DoubleService
+            .render_erased(wrong.as_ref(), &Colors::new(false))
+            .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("DoubleData"),
+            "error message must name the expected type; got: {msg}"
+        );
     }
 }

@@ -20,13 +20,13 @@ use crate::presentation::colors::Colors;
 pub mod prelude {
     pub use super::Service;
     pub use crate::core::error::AppError;
-    pub use crate::presentation::colors::{Colors, Threshold};
-    pub use crate::presentation::format::print_row;
+    pub use crate::presentation::colors::Colors;
+    pub use crate::presentation::format::{Threshold, print_row};
 }
 
 /// `Service` is the common interface implemented by every system information service
 pub trait Service {
-    type Data;
+    type Data: Send + Sync;
 
     /// `collect()` reads raw system data and returns it
     ///
@@ -39,34 +39,35 @@ pub trait Service {
 
 /// `AnyService` is an object-safe, type-erased counterpart to [`Service`]
 ///
-pub trait AnyService {
+pub trait AnyService: Send + Sync {
     /// `collect_erased()` calls the underlying service's `collect()`, boxing the
     /// successful result as `Box<dyn Any>`
     ///
-    fn collect_erased(&self) -> Result<Box<dyn Any>, AppError>;
+    fn collect_erased(&self) -> Result<Box<dyn Any + Send>, AppError>;
 
     /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
     /// and calls `render()`
     ///
     #[must_use = "a type mismatch produces Err; callers must handle the failure case"]
-    fn render_erased(&self, data: &dyn Any, colors: &Colors) -> Result<(), AppError>;
+    fn render_erased(&self, data: &(dyn Any + Send), colors: &Colors) -> Result<(), AppError>;
 }
 
 /// Blanket implementation: every [`Service`] is automatically an [`AnyService`]
 impl<S> AnyService for S
 where
-    S: Service,
-    S::Data: 'static,
+    S: Service + Send + Sync,
+    S::Data: 'static + Send + Sync,
 {
     /// `collect_erased()` boxes the successful result of `collect()`
     ///
-    fn collect_erased(&self) -> Result<Box<dyn Any>, AppError> {
-        self.collect().map(|data| Box::new(data) as Box<dyn Any>)
+    fn collect_erased(&self) -> Result<Box<dyn Any + Send>, AppError> {
+        self.collect()
+            .map(|data| Box::new(data) as Box<dyn Any + Send>)
     }
 
     /// `render_erased()` downcasts `data` to `S::Data` and calls `render()`
     ///
-    fn render_erased(&self, data: &dyn Any, colors: &Colors) -> Result<(), AppError> {
+    fn render_erased(&self, data: &(dyn Any + Send), colors: &Colors) -> Result<(), AppError> {
         let typed = data.downcast_ref::<S::Data>().ok_or_else(|| {
             AppError::DataUnavailable(format!(
                 "render type mismatch: expected {}, got incompatible Any",
@@ -143,7 +144,7 @@ mod tests {
     ///
     #[test]
     fn render_erased_correct_type_returns_ok() {
-        let data: Box<dyn Any> = Box::new(DoubleData);
+        let data: Box<dyn Any + Send> = Box::new(DoubleData);
         let result = DoubleService.render_erased(data.as_ref(), &Colors::new(false));
         assert!(result.is_ok(), "render with the correct type must succeed");
     }
@@ -171,7 +172,7 @@ mod tests {
     ///
     #[test]
     fn render_erased_wrong_type_returns_err_not_panics() {
-        let wrong: Box<dyn Any> = Box::new("this is not DoubleData");
+        let wrong: Box<dyn Any + Send> = Box::new("this is not DoubleData");
         let result = DoubleService.render_erased(wrong.as_ref(), &Colors::new(false));
         assert!(
             result.is_err(),
@@ -184,7 +185,7 @@ mod tests {
     ///
     #[test]
     fn render_erased_type_mismatch_produces_data_unavailable() {
-        let wrong: Box<dyn Any> = Box::new(99_u8);
+        let wrong: Box<dyn Any + Send> = Box::new(99_u8);
         let err = DoubleService
             .render_erased(wrong.as_ref(), &Colors::new(false))
             .unwrap_err();
@@ -199,9 +200,7 @@ mod tests {
     ///
     #[test]
     fn render_erased_error_message_names_expected_type() {
-        // The error message must identify the expected type so the wiring mistake
-        // is immediately actionable for the developer who sees it.
-        let wrong: Box<dyn Any> = Box::new(99_u8);
+        let wrong: Box<dyn Any + Send> = Box::new(99_u8);
         let err = DoubleService
             .render_erased(wrong.as_ref(), &Colors::new(false))
             .unwrap_err();

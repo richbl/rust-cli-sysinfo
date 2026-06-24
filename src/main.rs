@@ -13,7 +13,8 @@ use std::io::{self, Write};
 
 use crate::cli::Opts;
 use crate::core::error::AppError;
-use crate::presentation::colors::Colors;
+use crate::presentation::colors::{Colors, Threshold};
+use crate::presentation::format::print_row;
 use crate::services::AnyService;
 use crate::services::cpu_model::CpuModelService;
 use crate::services::cpu_usage::CpuUsageService;
@@ -58,8 +59,8 @@ impl ServiceEntry {
 /// `build_registry()` constructs one [`ServiceEntry`] for every known service, wiring
 /// in user-supplied options
 ///
-/// When adding/removing services, this is the one location in this file that needs to change
-/// Additionally, one entry in `slot::SLOT_TABLE` needs to be added and a new module created
+/// When adding/removing services, this is the one location in this file that needs to change...
+/// Also, one entry in `slot::SLOT_TABLE` needs to be added and a new module created
 /// under `services/`
 fn build_registry(opts: &Opts) -> Vec<ServiceEntry> {
     vec![
@@ -87,13 +88,19 @@ fn build_registry(opts: &Opts) -> Vec<ServiceEntry> {
     ]
 }
 
-/// `find_entry()` returns the registry entry for `id`
+/// `find_entry()` returns the registry entry for `id`, or `None` if no entry is registered
 ///
-fn find_entry(registry: &[ServiceEntry], id: ServiceSlot) -> &ServiceEntry {
-    registry
-        .iter()
-        .find(|entry| entry.id == id)
-        .expect("every ServiceSlot has a corresponding registry entry")
+fn find_entry(registry: &[ServiceEntry], id: ServiceSlot) -> Option<&ServiceEntry> {
+    registry.iter().find(|entry| entry.id == id)
+}
+
+/// `render_service_error()` prints a standard error row for a slot whose data could
+/// not be collected or rendered
+///
+fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
+    let label = format!("  {}:", id.token());
+    let value = format!("unavailable ({error})");
+    print_row(&label, &value, &Threshold::None, colors);
 }
 
 /// `render_labeled()` prints the token reference table (output of `-s` with no argument)
@@ -139,9 +146,17 @@ fn collect_services(
     let mut collected: HashMap<ServiceSlot, CollectResult> = HashMap::new();
 
     for &id in active_slots {
-        collected
-            .entry(id)
-            .or_insert_with(|| find_entry(registry, id).service.collect_erased());
+        collected.entry(id).or_insert_with(|| {
+            find_entry(registry, id).map_or_else(
+                || {
+                    Err(AppError::DataUnavailable(format!(
+                        "no registry entry for slot '{}'",
+                        id.token()
+                    )))
+                },
+                |entry| entry.service.collect_erased(),
+            )
+        });
     }
 
     collected
@@ -162,26 +177,30 @@ fn render_services(
     );
 
     for &id in active_slots {
-        let result = collected
-            .get(&id)
-            .expect("every active slot was collected above");
+        let Some(result) = collected.get(&id) else {
+            render_service_error(
+                id,
+                &AppError::DataUnavailable("result not collected".into()),
+                colors,
+            );
+            continue;
+        };
 
         match result {
-            Ok(data) => find_entry(registry, id)
-                .service
-                .render_erased(data.as_ref(), colors),
-            Err(e) => {
-                // Use the slot's token as the label since we don't have the exact string
-                // (e.g., "  DSKU:" instead of "  Disk usage:") to avoid duplicating labels.
-                let label = format!("  {}:", id.token());
-                let error_value = format!("unavailable ({e})");
+            Err(e) => render_service_error(id, e, colors),
+            Ok(data) => {
+                let Some(entry) = find_entry(registry, id) else {
+                    render_service_error(
+                        id,
+                        &AppError::DataUnavailable("no registry entry".into()),
+                        colors,
+                    );
+                    continue;
+                };
 
-                crate::presentation::format::print_row(
-                    &label,
-                    &error_value,
-                    &crate::presentation::colors::Threshold::None,
-                    colors,
-                );
+                if let Err(e) = entry.service.render_erased(data.as_ref(), colors) {
+                    render_service_error(id, &e, colors);
+                }
             }
         }
     }

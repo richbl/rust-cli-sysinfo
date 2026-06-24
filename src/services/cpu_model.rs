@@ -43,6 +43,7 @@ fn read_cpu_model() -> Option<String> {
     let file = File::open("/proc/cpuinfo").ok()?;
 
     for line in BufReader::new(file).lines().map_while(Result::ok) {
+        // Note: `let`-chains require Rust edition 2024
         if line.starts_with("model name")
             && let Some((_, val)) = line.split_once(':')
         {

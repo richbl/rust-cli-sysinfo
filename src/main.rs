@@ -2,6 +2,7 @@
 //! Displays metrics natively from Linux-based system calls
 
 mod cli;
+mod constants;
 mod core;
 mod presentation;
 mod services;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 
 use crate::cli::Opts;
+use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, SEP};
 use crate::core::error::AppError;
 use crate::presentation::colors::{Colors, Threshold};
 use crate::presentation::format::print_row;
@@ -28,11 +30,6 @@ use crate::services::os_name::OsService;
 use crate::services::uptime::UptimeService;
 use crate::services::users::UsersService;
 use crate::slot::{ServiceSlot, SlotFilter};
-
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const APP_NAME: &str = "Rust-CLI-SysInfo";
-pub const SEP: &str =
-    "────────────────────────────────────────────────────────────────────────────────";
 
 /// `CollectResult` is the type-erased result of a single service's `collect()` call
 type CollectResult = Result<Box<dyn Any>, AppError>;
@@ -227,7 +224,7 @@ fn main() {
     };
 
     if opts.clear {
-        print!("\x1bc");
+        print!("{CLEAR_SCREEN}");
     }
 
     print!(
@@ -240,9 +237,9 @@ fn main() {
     let collected = collect_services(&active_slots, &registry);
 
     if opts.clear {
-        println!("\x1bc");
+        println!("{CLEAR_SCREEN}");
     } else {
-        print!("\r\x1b[2K");
+        print!("{CLEAR_LINE}");
     }
 
     render_services(&active_slots, &registry, &collected, &colors);

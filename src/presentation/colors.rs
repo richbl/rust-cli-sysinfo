@@ -1,3 +1,5 @@
+use crate::constants::{BOLD, CYAN, GREEN, RED, RESET, YELLOW};
+
 /// ANSI escape sequences for terminal color output
 ///
 pub struct Colors {
@@ -16,15 +18,16 @@ impl Colors {
     /// `new` creates a `Colors` instance with ANSI codes when `enabled` is `true`, or empty
     /// strings otherwise
     ///
+    #[must_use]
     pub const fn new(enabled: bool) -> Self {
         if enabled {
             Self {
-                red: "\x1b[0;31m",
-                green: "\x1b[0;32m",
-                yellow: "\x1b[0;33m",
-                cyan: "\x1b[0;36m",
-                bold: "\x1b[1m",
-                reset: "\x1b[0m",
+                red: RED,
+                green: GREEN,
+                yellow: YELLOW,
+                cyan: CYAN,
+                bold: BOLD,
+                reset: RESET,
             }
         } else {
             Self {

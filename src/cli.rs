@@ -1,9 +1,9 @@
 use std::io::{self, IsTerminal};
 use std::process;
 
+use crate::constants::{APP_NAME, SEP, VERSION};
 use crate::presentation::colors::Colors;
 use crate::slot::{ServiceSlot, SlotFilter};
-use crate::{APP_NAME, SEP, VERSION};
 
 /// `Opts` contains the parsed command-line options for the utility
 pub struct Opts {
@@ -14,6 +14,7 @@ pub struct Opts {
     pub slot_filter: SlotFilter, // Service selection and ordering
 }
 
+// ... [Rest of cli.rs remains exactly the same] ...
 /// `Opts` implements the command-line options parser
 impl Opts {
     /// `from_args()` parses `argv` into [`Opts`], printing usage and exiting on any error

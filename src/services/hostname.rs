@@ -23,8 +23,8 @@ impl Service for HostnameService {
 
     /// `render()` renders the hostname
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
-        print_row("  Hostname:", &data.hostname, &Threshold::None, c);
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+        print_row(label, &data.hostname, &Threshold::None, c);
     }
 }
 
@@ -53,7 +53,8 @@ mod tests {
     ///
     fn render_does_not_panic() {
         let data = HostnameService.collect().unwrap();
+
         // render() writes to stdout; we just verify it does not panic
-        HostnameService.render(&data, &Colors::new(false));
+        HostnameService.render("  Hostname:", &data, &Colors::new(false));
     }
 }

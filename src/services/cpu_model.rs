@@ -26,9 +26,9 @@ impl Service for CpuModelService {
 
     /// `render()` renders the CPU model name
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
         print_row(
-            "  CPU:",
+            label,
             data.model.as_deref().unwrap_or("Unknown"),
             &Threshold::None,
             c,
@@ -87,6 +87,6 @@ mod tests {
     ///
     fn render_does_not_panic() {
         let data = CpuModelService.collect().unwrap();
-        CpuModelService.render(&data, &Colors::new(false));
+        CpuModelService.render("  CPU:", &data, &Colors::new(false));
     }
 }

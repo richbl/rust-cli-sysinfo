@@ -1,4 +1,6 @@
-use std::process;
+use std::ffi::CString;
+use std::io;
+use std::mem::MaybeUninit;
 
 use super::prelude::*;
 use crate::constants::{DISK_CRIT_PCT, DISK_WARN_PCT};
@@ -21,44 +23,31 @@ pub struct DiskService {
 impl Service for DiskService {
     type Data = DiskInfo;
 
-    /// `collect()` runs `df -kP` against the configured mount path and returns usage statistics
+    /// `collect()` uses `statvfs(2)` against the configured mount path and returns usage
+    /// statistics
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        // -k: report sizes in 1K blocks; -P: POSIX portable output format (stable column order)
-        let output = process::Command::new("df")
-            .args(["-kP", &self.mount])
-            .output()
-            .map_err(AppError::Io)?;
+        let c_mount = CString::new(self.mount.as_str())
+            .map_err(|_| AppError::Parse(format!("Invalid mount path: {}", self.mount)))?;
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(AppError::DataUnavailable(format!(
-                "df failed for {}: {}",
-                self.mount,
-                stderr.trim()
-            )));
+        let mut statvfs_buf = MaybeUninit::<libc::statvfs>::uninit();
+
+        // `c_mount` is a valid null-terminated string, and `statvfs_buf` is a valid pointer
+        let ret = unsafe { libc::statvfs(c_mount.as_ptr(), statvfs_buf.as_mut_ptr()) };
+        if ret != 0 {
+            return Err(AppError::Io(io::Error::last_os_error()));
         }
 
-        let stdout = std::str::from_utf8(&output.stdout)
-            .map_err(|e| AppError::Parse(format!("Invalid UTF-8 in df output: {e}")))?;
-        let line = stdout
-            .lines()
-            .nth(1)
-            .ok_or_else(|| AppError::Parse("df output missing data line".into()))?;
+        // `statvfs` initializes the buffer on success (ret == 0)
+        let statvfs_buf = unsafe { statvfs_buf.assume_init() };
 
-        let cols: Vec<&str> = line.split_whitespace().collect();
-        if cols.len() < 6 {
-            return Err(AppError::Parse(format!(
-                "Unexpected df output format: {line}"
-            )));
-        }
+        // `f_frsize` is the fundamental file system block size
+        let total_bytes = statvfs_buf.f_blocks * statvfs_buf.f_frsize;
+        let free_bytes = statvfs_buf.f_bfree * statvfs_buf.f_frsize;
+        let total_kb = total_bytes / 1024;
 
-        let total_kb: u64 = cols[1]
-            .parse()
-            .map_err(|_| AppError::Parse(format!("Failed to parse df total_kb: {}", cols[1])))?;
-        let used_kb: u64 = cols[2]
-            .parse()
-            .map_err(|_| AppError::Parse(format!("Failed to parse df used_kb: {}", cols[2])))?;
+        // `df` calculates used as: total - free
+        let used_kb = total_kb.saturating_sub(free_bytes / 1024);
 
         #[allow(clippy::cast_precision_loss)]
         let pct = if total_kb > 0 {
@@ -73,10 +62,11 @@ impl Service for DiskService {
             pct,
         })
     }
+
     /// `render()` renders disk usage as a percentage with used/total sizes and threshold-based
     /// color coding
     ///
-    fn render(&self, disk: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, disk: &Self::Data, c: &Colors) {
         let (disk_str, disk_thresh) = if disk.total_kb == 0 {
             ("n/a".to_string(), Threshold::None)
         } else {
@@ -97,6 +87,6 @@ impl Service for DiskService {
             )
         };
 
-        print_row("  Disk usage:", &disk_str, &disk_thresh, c);
+        print_row(label, &disk_str, &disk_thresh, c);
     }
 }

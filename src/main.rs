@@ -88,9 +88,9 @@ fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
 /// not be collected or rendered
 ///
 fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
-    let label = format!("  {}:", id.token());
-    let value = format!("unavailable ({error})");
-    print_row(&label, &value, &Threshold::None, colors);
+    let label = id.label();
+    let value = format!("n/a ({error})");
+    print_row(label, &value, &Threshold::None, colors);
 }
 
 /// `render_labeled()` prints the token reference table (output of `-s` with no argument)
@@ -188,7 +188,11 @@ fn render_services(
                     continue;
                 };
 
-                if let Err(e) = entry.service.render_erased(data.as_ref(), colors) {
+                // Render the service
+                if let Err(e) = entry
+                    .service
+                    .render_erased(id.label(), data.as_ref(), colors)
+                {
                     render_service_error(id, &e, colors);
                 }
             }

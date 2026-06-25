@@ -31,12 +31,12 @@ impl Service for UptimeService {
 
     /// `render()` renders system uptime formatted as `DDDd:HHh:MMm:SSs`
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
         let uptime_str = data
             .uptime_secs
             .map_or_else(|| "unknown".to_string(), format_uptime);
 
-        print_row("  Uptime:", &uptime_str, &Threshold::None, c);
+        print_row(label, &uptime_str, &Threshold::None, c);
     }
 }
 
@@ -76,6 +76,6 @@ mod tests {
     ///
     fn render_does_not_panic() {
         let data = UptimeService.collect().unwrap();
-        UptimeService.render(&data, &Colors::new(false));
+        UptimeService.render("  Uptime:", &data, &Colors::new(false));
     }
 }

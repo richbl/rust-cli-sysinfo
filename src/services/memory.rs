@@ -80,7 +80,7 @@ impl Service for MemoryService {
     /// `render()` renders memory usage as a percentage with used/total in MB and threshold-based
     /// color coding
     ///
-    fn render(&self, mem: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, mem: &Self::Data, c: &Colors) {
         let mem_str = format!(
             "{:.1}% ({}M/{}M)",
             mem.pct,
@@ -89,7 +89,7 @@ impl Service for MemoryService {
         );
 
         print_row(
-            "  Memory usage:",
+            label,
             &mem_str,
             &Threshold::Check {
                 value: mem.pct,

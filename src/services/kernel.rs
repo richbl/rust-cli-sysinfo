@@ -23,8 +23,8 @@ impl Service for KernelService {
 
     /// `render()` renders the kernel version
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
-        print_row("  Kernel:", &data.version, &Threshold::None, c);
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+        print_row(label, &data.version, &Threshold::None, c);
     }
 }
 
@@ -67,6 +67,6 @@ mod tests {
     ///
     fn render_does_not_panic() {
         let data = KernelService.collect().unwrap();
-        KernelService.render(&data, &Colors::new(false));
+        KernelService.render("  Kernel:", &data, &Colors::new(false));
     }
 }

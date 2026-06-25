@@ -1,8 +1,11 @@
-use std::process;
+use std::fs::File;
+use std::io::{self, Read};
+use std::mem::MaybeUninit;
 
 use super::prelude::*;
+use crate::core::utils::c_char_array_to_string;
 
-/// `UsersInfo` contains the list of logged-in user list collected from `who`
+/// `UsersInfo` contains the list of logged-in user list collected from `/var/run/utmp`
 #[derive(Default)]
 pub struct UsersInfo {
     pub users: Vec<String>,
@@ -15,28 +18,44 @@ pub struct UsersService;
 impl Service for UsersService {
     type Data = UsersInfo;
 
-    /// `collect()` runs `who` and returns a sorted, deduplicated list of usernames
+    /// `collect()` reads `/var/run/utmp` natively and returns a sorted, deduplicated list of usernames
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let output = process::Command::new("who")
-            .output()
-            .map_err(AppError::Io)?;
+        let mut file = File::open("/var/run/utmp").map_err(AppError::Io)?;
+        let mut users = Vec::new();
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(AppError::DataUnavailable(format!(
-                "who command failed: {}",
-                stderr.trim()
-            )));
+        loop {
+            let mut entry = MaybeUninit::<libc::utmpx>::uninit();
+
+            // `libc::utmpx` is a POD struct: we create a byte slice over its memory to read into it
+            let buf = unsafe {
+                std::slice::from_raw_parts_mut(
+                    entry.as_mut_ptr().cast::<u8>(),
+                    std::mem::size_of::<libc::utmpx>(),
+                )
+            };
+
+            match file.read_exact(buf) {
+                Ok(()) => {
+                    // We just read exactly `size_of::<libc::utmpx>()` bytes into `entry`
+                    let entry = unsafe { entry.assume_init() };
+
+                    // Skip entries that do not represent an active user session
+                    if entry.ut_type != libc::USER_PROCESS {
+                        continue;
+                    }
+
+                    let user = c_char_array_to_string(&entry.ut_user);
+                    if !user.is_empty() {
+                        users.push(user);
+                    }
+                }
+                // Break on EOF (which includes cleanly finishing the file or hitting a partial
+                // record at the end)
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => return Err(AppError::Io(e)),
+            }
         }
-
-        let stdout = std::str::from_utf8(&output.stdout)
-            .map_err(|e| AppError::Parse(format!("Invalid UTF-8 in who output: {e}")))?;
-
-        let mut users: Vec<String> = stdout
-            .lines()
-            .filter_map(|l| l.split_whitespace().next().map(String::from))
-            .collect();
 
         users.sort_unstable();
         users.dedup();
@@ -46,13 +65,13 @@ impl Service for UsersService {
 
     /// `render()` renders the list of logged-in users as a comma-separated row
     ///
-    fn render(&self, users: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, users: &Self::Data, c: &Colors) {
         let user_str = if users.users.is_empty() {
             "Nobody".to_string()
         } else {
             users.users.join(", ")
         };
 
-        print_row("  User(s):", &user_str, &Threshold::None, c);
+        print_row(label, &user_str, &Threshold::None, c);
     }
 }

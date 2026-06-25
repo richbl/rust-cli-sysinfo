@@ -25,6 +25,18 @@ pub fn read_hex_u16(path: &Path) -> Option<u16> {
     u16::from_str_radix(value, 16).ok()
 }
 
+/// `c_char_array_to_string()` safely converts a fixed-size C character array (null-terminated)
+/// from a `libc` struct into a Rust `String`.
+///
+pub fn c_char_array_to_string(c_array: &[libc::c_char]) -> String {
+    c_array
+        .iter()
+        .map(|&c| c.cast_unsigned())
+        .take_while(|&c| c != 0)
+        .map(|c| c as char)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +202,32 @@ mod tests {
         // Verify that leading/trailing whitespace (common in sysfs files) is handled
         let f = temp_file_with("  0x10DE  \n");
         assert_eq!(read_hex_u16(f.path()), Some(0x10DE_u16));
+    }
+
+    #[test]
+    /// `c_char_array_to_string_extracts_null_terminated_string()` asserts that it extracts up to
+    /// the null terminator
+    ///
+    fn c_char_array_to_string_extracts_null_terminated_string() {
+        let arr: [libc::c_char; 8] = [116, 101, 115, 116, 0, 0, 0, 0]; // "test\0\0\0\0"
+        assert_eq!(c_char_array_to_string(&arr), "test");
+    }
+
+    #[test]
+    /// `c_char_array_to_string_handles_full_array_no_null()` asserts that it handles an array with
+    /// no null terminator
+    ///
+    fn c_char_array_to_string_handles_full_array_no_null() {
+        let arr: [libc::c_char; 4] = [102, 111, 111, 0]; // "foo\0"
+        assert_eq!(c_char_array_to_string(&arr), "foo");
+    }
+
+    #[test]
+    /// `c_char_array_to_string_empty_array_returns_empty_string()` asserts that an array starting
+    /// with null returns empty
+    ///
+    fn c_char_array_to_string_empty_array_returns_empty_string() {
+        let arr: [libc::c_char; 4] = [0, 0, 0, 0];
+        assert_eq!(c_char_array_to_string(&arr), "");
     }
 }

@@ -32,9 +32,9 @@ pub trait Service {
     ///
     fn collect(&self) -> Result<Self::Data, AppError>;
 
-    /// `render()` formats and prints `data` to stdout using the provided colors
+    /// `render()` formats and prints `data` to stdout using the provided label and colors
     ///
-    fn render(&self, data: &Self::Data, colors: &Colors);
+    fn render(&self, label: &str, data: &Self::Data, colors: &Colors);
 }
 
 /// `AnyService` is an object-safe, type-erased counterpart to [`Service`]
@@ -46,10 +46,15 @@ pub trait AnyService: Send + Sync {
     fn collect_erased(&self) -> Result<Box<dyn Any + Send>, AppError>;
 
     /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
-    /// and calls `render()`
+    /// and calls `render()` with the provided label
     ///
     #[must_use = "a type mismatch produces Err; callers must handle the failure case"]
-    fn render_erased(&self, data: &(dyn Any + Send), colors: &Colors) -> Result<(), AppError>;
+    fn render_erased(
+        &self,
+        label: &str,
+        data: &(dyn Any + Send),
+        colors: &Colors,
+    ) -> Result<(), AppError>;
 }
 
 /// Blanket implementation: every [`Service`] is automatically an [`AnyService`]
@@ -67,7 +72,12 @@ where
 
     /// `render_erased()` downcasts `data` to `S::Data` and calls `render()`
     ///
-    fn render_erased(&self, data: &(dyn Any + Send), colors: &Colors) -> Result<(), AppError> {
+    fn render_erased(
+        &self,
+        label: &str,
+        data: &(dyn Any + Send),
+        colors: &Colors,
+    ) -> Result<(), AppError> {
         let typed = data.downcast_ref::<S::Data>().ok_or_else(|| {
             AppError::DataUnavailable(format!(
                 "render type mismatch: expected {}, got incompatible Any",
@@ -75,7 +85,7 @@ where
             ))
         })?;
 
-        self.render(typed, colors);
+        self.render(label, typed, colors);
         Ok(())
     }
 }
@@ -97,7 +107,7 @@ mod tests {
             Ok(DoubleData)
         }
 
-        fn render(&self, _data: &Self::Data, _colors: &Colors) {
+        fn render(&self, _label: &str, _data: &Self::Data, _colors: &Colors) {
             // no-op: render output goes to stdout; only the Result matters here
         }
     }
@@ -145,7 +155,7 @@ mod tests {
     #[test]
     fn render_erased_correct_type_returns_ok() {
         let data: Box<dyn Any + Send> = Box::new(DoubleData);
-        let result = DoubleService.render_erased(data.as_ref(), &Colors::new(false));
+        let result = DoubleService.render_erased("  Test:", data.as_ref(), &Colors::new(false));
         assert!(result.is_ok(), "render with the correct type must succeed");
     }
 
@@ -158,7 +168,8 @@ mod tests {
         let collected = DoubleService
             .collect_erased()
             .expect("collect must not fail");
-        let result = DoubleService.render_erased(collected.as_ref(), &Colors::new(false));
+        let result =
+            DoubleService.render_erased("  Test:", collected.as_ref(), &Colors::new(false));
         assert!(
             result.is_ok(),
             "a correct collect→render round-trip must always succeed"
@@ -173,7 +184,7 @@ mod tests {
     #[test]
     fn render_erased_wrong_type_returns_err_not_panics() {
         let wrong: Box<dyn Any + Send> = Box::new("this is not DoubleData");
-        let result = DoubleService.render_erased(wrong.as_ref(), &Colors::new(false));
+        let result = DoubleService.render_erased("  Test:", wrong.as_ref(), &Colors::new(false));
         assert!(
             result.is_err(),
             "a type mismatch must produce Err, not a panic"
@@ -187,7 +198,7 @@ mod tests {
     fn render_erased_type_mismatch_produces_data_unavailable() {
         let wrong: Box<dyn Any + Send> = Box::new(99_u8);
         let err = DoubleService
-            .render_erased(wrong.as_ref(), &Colors::new(false))
+            .render_erased("  Test:", wrong.as_ref(), &Colors::new(false))
             .unwrap_err();
         assert!(
             matches!(err, AppError::DataUnavailable(_)),
@@ -202,7 +213,7 @@ mod tests {
     fn render_erased_error_message_names_expected_type() {
         let wrong: Box<dyn Any + Send> = Box::new(99_u8);
         let err = DoubleService
-            .render_erased(wrong.as_ref(), &Colors::new(false))
+            .render_erased("  Test:", wrong.as_ref(), &Colors::new(false))
             .unwrap_err();
         let msg = err.to_string();
         assert!(

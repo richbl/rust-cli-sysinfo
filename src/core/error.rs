@@ -4,11 +4,7 @@ use std::io;
 /// `AppError` is the application-level error type returned by all service `collect()` calls
 #[derive(Debug)]
 pub enum AppError {
-    /// Wraps a standard I/O error (e.g., file not found, permission denied)
     Io(io::Error),
-    /// Returned when a value cannot be parsed from its raw string representation
-    Parse(String),
-    /// Returned when an expected data source is absent or returns no usable content
     DataUnavailable(String),
 }
 
@@ -19,7 +15,6 @@ impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Io(e) => write!(f, "IO error: {e}"),
-            Self::Parse(e) => write!(f, "Parse error: {e}"),
             Self::DataUnavailable(s) => write!(f, "Data unavailable: {s}"),
         }
     }
@@ -53,25 +48,6 @@ mod tests {
         let app_err = AppError::Io(io_err);
         assert!(app_err.to_string().starts_with("IO error:"));
         assert!(app_err.to_string().contains("file not found"));
-    }
-
-    // --- AppError::Parse test
-
-    #[test]
-    /// `display_parse_includes_message()` asserts that the `Parse` variant of `AppError` includes
-    /// the underlying parse error message
-    ///
-    fn display_parse_includes_message() {
-        let err = AppError::Parse("bad integer value".to_string());
-        assert_eq!(err.to_string(), "Parse error: bad integer value");
-    }
-
-    #[test]
-    /// `display_parse_empty_message()` asserts that an empty message is handled correctly
-    ///
-    fn display_parse_empty_message() {
-        let err = AppError::Parse(String::new());
-        assert_eq!(err.to_string(), "Parse error: ");
     }
 
     // AppError::DataUnavailable test
@@ -113,7 +89,8 @@ mod tests {
     /// `std::error::Error`
     ///
     fn app_error_is_boxable_as_std_error() {
-        let err: Box<dyn std::error::Error> = Box::new(AppError::Parse("test".to_string()));
+        let err: Box<dyn std::error::Error> =
+            Box::new(AppError::DataUnavailable("test".to_string()));
         assert!(!err.to_string().is_empty());
     }
 }

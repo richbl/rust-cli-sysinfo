@@ -1,8 +1,11 @@
-use std::process;
+use std::fs::File;
+use std::io::{self, Read};
+use std::mem::MaybeUninit;
 
 use super::prelude::*;
+use crate::core::utils::c_char_array_to_string;
 
-/// `UsersInfo` contains the list of logged-in user list collected from `who`
+/// `UsersInfo` contains the list of logged-in user list collected from `/var/run/utmp`
 #[derive(Default)]
 pub struct UsersInfo {
     pub users: Vec<String>,
@@ -15,44 +18,53 @@ pub struct UsersService;
 impl Service for UsersService {
     type Data = UsersInfo;
 
-    /// `collect()` runs `who` and returns a sorted, deduplicated list of usernames
-    ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let output = process::Command::new("who")
-            .output()
-            .map_err(AppError::Io)?;
+        let mut file = File::open("/var/run/utmp").map_err(AppError::Io)?;
+        let mut users = Vec::new();
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(AppError::DataUnavailable(format!(
-                "who command failed: {}",
-                stderr.trim()
-            )));
+        while let Some(entry) = read_utmpx_entry(&mut file).map_err(AppError::Io)? {
+            if entry.ut_type == libc::USER_PROCESS {
+                let user = c_char_array_to_string(&entry.ut_user);
+                if !user.is_empty() {
+                    users.push(user);
+                }
+            }
         }
-
-        let stdout = std::str::from_utf8(&output.stdout)
-            .map_err(|e| AppError::Parse(format!("Invalid UTF-8 in who output: {e}")))?;
-
-        let mut users: Vec<String> = stdout
-            .lines()
-            .filter_map(|l| l.split_whitespace().next().map(String::from))
-            .collect();
 
         users.sort_unstable();
         users.dedup();
-
         Ok(UsersInfo { users })
     }
 
     /// `render()` renders the list of logged-in users as a comma-separated row
     ///
-    fn render(&self, users: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, users: &Self::Data, c: &Colors) {
         let user_str = if users.users.is_empty() {
             "Nobody".to_string()
         } else {
             users.users.join(", ")
         };
 
-        print_row("  User(s):", &user_str, &Threshold::None, c);
+        print_row(label, &user_str, &Threshold::None, c);
+    }
+}
+
+/// `read_utmpx_entry()` reads the next `utmpx` record from `file`
+///
+fn read_utmpx_entry(file: &mut File) -> Result<Option<libc::utmpx>, io::Error> {
+    // SAFETY: `libc::utmpx` is a C POD struct (all fields are integers or fixed `c_char`arrays)
+    // Every possible bit pattern is a valid, initialized value, so byte-filling the struct via
+    // `read_exact` and immediately calling `assume_init` is sound
+    unsafe {
+        let mut entry = MaybeUninit::<libc::utmpx>::uninit();
+        let buf = std::slice::from_raw_parts_mut(
+            entry.as_mut_ptr().cast::<u8>(),
+            std::mem::size_of::<libc::utmpx>(),
+        );
+        match file.read_exact(buf) {
+            Ok(()) => Ok(Some(entry.assume_init())),
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 }

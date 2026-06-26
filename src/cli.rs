@@ -14,7 +14,6 @@ pub struct Opts {
     pub slot_filter: SlotFilter, // Service selection and ordering
 }
 
-// ... [Rest of cli.rs remains exactly the same] ...
 /// `Opts` implements the command-line options parser
 impl Opts {
     /// `from_args()` parses `argv` into [`Opts`], printing usage and exiting on any error

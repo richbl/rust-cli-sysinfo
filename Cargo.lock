@@ -182,7 +182,9 @@ name = "rust-cli-sysinfo"
 version = "0.5.0"
 dependencies = [
  "lexopt",
+ "libc",
  "pci-ids",
+ "rustix",
  "tempfile",
 ]
 

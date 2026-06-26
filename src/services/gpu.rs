@@ -28,14 +28,14 @@ impl Service for GpuService {
 
     /// `render()` renders GPU model name(s) as a single row, newline-separated for multiple GPUs
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
         let gpu_str = if data.models.is_empty() {
             "Unknown".to_string()
         } else {
             data.models.join("\n                 ")
         };
 
-        print_row("  GPU(s):", &gpu_str, &Threshold::None, c);
+        print_row(label, &gpu_str, &Threshold::None, c);
     }
 }
 
@@ -75,7 +75,8 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
     Ok(names)
 }
 
-/// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device IDs
+/// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device
+/// IDs
 ///
 fn gpu_name_from_card(card_path: &Path) -> Option<String> {
     let device_path = card_path.join("device");

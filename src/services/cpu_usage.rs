@@ -35,7 +35,7 @@ impl Service for CpuUsageService {
 
     /// `render()` renders CPU utilization with threshold-based color coding
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
         let (cpu_str, cpu_thresh) = data.usage_pct.map_or_else(
             || ("n/a".to_string(), Threshold::None),
             |v| {
@@ -50,7 +50,7 @@ impl Service for CpuUsageService {
             },
         );
 
-        print_row("  CPU usage:", &cpu_str, &cpu_thresh, c);
+        print_row(label, &cpu_str, &cpu_thresh, c);
     }
 }
 

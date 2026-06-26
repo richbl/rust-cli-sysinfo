@@ -24,8 +24,8 @@ impl Service for OsService {
 
     /// `render()` renders the OS name
     ///
-    fn render(&self, data: &Self::Data, c: &Colors) {
-        print_row("  OS:", &data.name, &Threshold::None, c);
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+        print_row(label, &data.name, &Threshold::None, c);
     }
 }
 
@@ -64,6 +64,6 @@ mod tests {
     ///
     fn render_does_not_panic() {
         let data = OsService.collect().unwrap();
-        OsService.render(&data, &Colors::new(false));
+        OsService.render("  OS:", &data, &Colors::new(false));
     }
 }

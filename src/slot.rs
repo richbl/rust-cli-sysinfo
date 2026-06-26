@@ -5,17 +5,18 @@ pub enum SlotFilter {
     Custom(Vec<ServiceSlot>), // `-s TOKENS`: render only the specified slots in the given order
 }
 
-/// `SlotMeta` bundles a slot's `-s` token and its human-readable description
+/// `SlotMeta` bundles a slot's `-s` token, display label, and its human-readable description
 ///
 struct SlotMeta {
     slot: ServiceSlot,
     token: &'static str,
+    label: &'static str,
     description: &'static str,
 }
 
 /// `define_slots!` generates the `SLOT_TABLE` and `ServiceSlot` enum
 macro_rules! define_slots {
-    ($($variant:ident: $token:literal, $description:literal);* $(;)?) => {
+    ($($variant:ident: $token:literal, $label:literal, $description:literal);* $(;)?) => {
 
         /// `ServiceSlot` identifies each service row in the output
         #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -29,6 +30,7 @@ macro_rules! define_slots {
                 SlotMeta {
                     slot: ServiceSlot::$variant,
                     token: $token,
+                    label: $label,
                     description: $description,
                 },
             )*
@@ -37,18 +39,21 @@ macro_rules! define_slots {
 }
 
 // `define_slots!` macro generates the `SLOT_TABLE` and `ServiceSlot` enum
+//
+// This table is used to map the `-s` token strings to the `ServiceSlot` variants and provides
+// a human-readable description for each slot during normal rendering output
 define_slots! {
-    Os:   "OS",   "Operating system name and version";
-    Hst:  "HST",  "System hostname";
-    Cpu:  "CPU",  "CPU model";
-    Gpu:  "GPU",  "GPU model(s)";
-    Knl:  "KNL",  "Linux kernel version";
-    Upt:  "UPT",  "System uptime";
-    Load: "LOAD", "Load averages (1m, 5m, 15m)";
-    CpuU: "CPUU", "CPU usage %";
-    RamU: "RAMU", "Memory usage % (Used/Total)";
-    DskU: "DSKU", "Disk usage % (Used/Total)";
-    Usr:  "USR",  "Current users";
+    Os:   "OS",   "  OS:",             "Operating system name and version";
+    Hst:  "HST",  "  Hostname:",       "System hostname";
+    Cpu:  "CPU",  "  CPU:",            "CPU model";
+    Gpu:  "GPU",  "  GPU(s):",         "GPU model(s)";
+    Knl:  "KNL",  "  Kernel:",         "Linux kernel version";
+    Upt:  "UPT",  "  Uptime:",         "System uptime";
+    Load: "LOAD", "  Load averages:",  "Load averages (1m, 5m, 15m)";
+    CpuU: "CPUU", "  CPU usage:",      "CPU usage %";
+    RamU: "RAMU", "  Memory usage:",   "Memory usage % (Used/Total)";
+    DskU: "DSKU", "  Disk usage:",     "Disk usage % (Used/Total)";
+    Usr:  "USR",  "  User(s):",         "Current users";
 }
 
 /// `ServiceSlot` methods
@@ -67,6 +72,13 @@ impl ServiceSlot {
     #[must_use]
     pub fn token(self) -> &'static str {
         self.meta().token
+    }
+
+    /// `label()` returns the display label string for this slot
+    ///
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        self.meta().label
     }
 
     /// `description()` returns a description shown next to the token in `-s` labeled output
@@ -208,6 +220,42 @@ mod tests {
                 "{slot:?} has an empty description"
             );
         }
+    }
+
+    // ServiceSlot::label() test
+
+    #[test]
+    /// `all_labels_are_non_empty()` asserts that all slot labels are non-empty
+    ///
+    fn all_labels_are_non_empty() {
+        for slot in ServiceSlot::all() {
+            assert!(!slot.label().is_empty(), "{slot:?} has an empty label");
+        }
+    }
+
+    #[test]
+    /// `all_labels_start_with_spaces_and_end_with_colon()` asserts that all slot labels have two
+    /// leading spaces and a trailing colon
+    ///
+    fn all_labels_start_with_spaces_and_end_with_colon() {
+        for slot in ServiceSlot::all() {
+            let label = slot.label();
+            assert!(
+                label.starts_with("  "),
+                "{slot:?} label does not start with spaces: {label:?}"
+            );
+            assert!(
+                label.ends_with(':'),
+                "{slot:?} label does not end with colon: {label:?}"
+            );
+        }
+    }
+
+    #[test]
+    /// `label_dsku_is_disk_usage()` asserts that the label for the `DskU` slot is correct
+    ///
+    fn label_dsku_is_disk_usage() {
+        assert_eq!(ServiceSlot::DskU.label(), "  Disk usage:");
     }
 
     // ServiceSlot::parse_list() test

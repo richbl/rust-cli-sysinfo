@@ -54,10 +54,6 @@ impl ServiceEntry {
 /// `build_registry()` constructs one [`ServiceEntry`] for every known service, wiring
 /// in user-supplied options
 ///
-/// When adding/removing services, this is the one location in this file that needs to change...
-/// Also, one entry in `slot::SLOT_TABLE` needs to be added and a new module created
-/// under `services/`
-///
 fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
     let mut map = HashMap::new();
     map.insert(ServiceSlot::Os, ServiceEntry::new(OsService));
@@ -88,9 +84,9 @@ fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
 /// not be collected or rendered
 ///
 fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
-    let label = format!("  {}:", id.token());
-    let value = format!("unavailable ({error})");
-    print_row(&label, &value, &Threshold::None, colors);
+    let label = id.label();
+    let value = format!("n/a - {error}");
+    print_row(label, &value, &Threshold::None, colors);
 }
 
 /// `render_labeled()` prints the token reference table (output of `-s` with no argument)
@@ -188,7 +184,11 @@ fn render_services(
                     continue;
                 };
 
-                if let Err(e) = entry.service.render_erased(data.as_ref(), colors) {
+                // Render the service
+                if let Err(e) = entry
+                    .service
+                    .render_erased(id.label(), data.as_ref(), colors)
+                {
                     render_service_error(id, &e, colors);
                 }
             }

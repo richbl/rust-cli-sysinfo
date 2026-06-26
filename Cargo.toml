@@ -6,11 +6,13 @@
 [dependencies]
   lexopt = "0.3.2"
   pci-ids = "0.2.6"
+  libc = "0.2"
+  rustix = { version = "1", features = ["fs"] }
 
 [dev-dependencies]
   tempfile = "3"
 
 [lints.clippy]
-  all = "warn"                  # all lint group includes correctness, suspicious, style, complexity, and perf
+  all = "warn"
   pedantic = "warn"
-  cognitive_complexity = "warn" # part of restriction lint group
+  cognitive_complexity = "warn"

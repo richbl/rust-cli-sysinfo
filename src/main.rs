@@ -54,10 +54,6 @@ impl ServiceEntry {
 /// `build_registry()` constructs one [`ServiceEntry`] for every known service, wiring
 /// in user-supplied options
 ///
-/// When adding/removing services, this is the one location in this file that needs to change...
-/// Also, one entry in `slot::SLOT_TABLE` needs to be added and a new module created
-/// under `services/`
-///
 fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
     let mut map = HashMap::new();
     map.insert(ServiceSlot::Os, ServiceEntry::new(OsService));
@@ -89,7 +85,7 @@ fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
 ///
 fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
     let label = id.label();
-    let value = format!("n/a ({error})");
+    let value = format!("n/a - {error}");
     print_row(label, &value, &Threshold::None, colors);
 }
 

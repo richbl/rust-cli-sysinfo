@@ -1,7 +1,3 @@
-use std::ffi::CString;
-use std::io;
-use std::mem::MaybeUninit;
-
 use super::prelude::*;
 use crate::constants::{DISK_CRIT_PCT, DISK_WARN_PCT};
 use crate::presentation::format::format_size;
@@ -27,23 +23,11 @@ impl Service for DiskService {
     /// statistics
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let c_mount = CString::new(self.mount.as_str())
-            .map_err(|_| AppError::Parse(format!("Invalid mount path: {}", self.mount)))?;
+        let stat =
+            rustix::fs::statvfs(&self.mount).map_err(|e| AppError::Io(std::io::Error::from(e)))?;
 
-        let mut statvfs_buf = MaybeUninit::<libc::statvfs>::uninit();
-
-        // `c_mount` is a valid null-terminated string, and `statvfs_buf` is a valid pointer
-        let ret = unsafe { libc::statvfs(c_mount.as_ptr(), statvfs_buf.as_mut_ptr()) };
-        if ret != 0 {
-            return Err(AppError::Io(io::Error::last_os_error()));
-        }
-
-        // `statvfs` initializes the buffer on success (ret == 0)
-        let statvfs_buf = unsafe { statvfs_buf.assume_init() };
-
-        // `f_frsize` is the fundamental file system block size
-        let total_bytes = statvfs_buf.f_blocks * statvfs_buf.f_frsize;
-        let free_bytes = statvfs_buf.f_bfree * statvfs_buf.f_frsize;
+        let total_bytes = stat.f_blocks * stat.f_frsize;
+        let free_bytes = stat.f_bfree * stat.f_frsize;
         let total_kb = total_bytes / 1024;
 
         // `df` calculates used as: total - free

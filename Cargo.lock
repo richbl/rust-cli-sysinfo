@@ -184,6 +184,7 @@ dependencies = [
  "lexopt",
  "libc",
  "pci-ids",
+ "rustix",
  "tempfile",
 ]
 

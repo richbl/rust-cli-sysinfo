@@ -14,7 +14,7 @@ impl Service for KernelService {
     type Data = KernelInfo;
 
     /// `collect()` reads the kernel version from `/proc/sys/kernel/osrelease`
-    ///
+    //
     fn collect(&self) -> Result<Self::Data, AppError> {
         let version =
             read_first_line("/proc/sys/kernel/osrelease").unwrap_or_else(|| "unknown".into());
@@ -22,7 +22,7 @@ impl Service for KernelService {
     }
 
     /// `render()` renders the kernel version
-    ///
+    //
     fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
         print_row(label, &data.version, &Threshold::None, c);
     }
@@ -34,10 +34,10 @@ mod tests {
     use super::*;
     use crate::presentation::colors::Colors;
 
-    #[test]
     /// `collect_returns_ok_with_non_empty_version()` asserts that kernel version collection
     /// succeeds and returns a non-empty version
     ///
+    #[test]
     fn collect_returns_ok_with_non_empty_version() {
         let result = KernelService.collect();
         assert!(result.is_ok());
@@ -48,10 +48,10 @@ mod tests {
         );
     }
 
-    #[test]
     /// `kernel_version_contains_dot_separator()` asserts that kernel version contains at least one
     /// dot separator
     ///
+    #[test]
     fn kernel_version_contains_dot_separator() {
         // A kernel version string always contains at least one '.' (e.g. "6.1.0")
         let data = KernelService.collect().unwrap();
@@ -62,9 +62,9 @@ mod tests {
         );
     }
 
-    #[test]
     /// `render_does_not_panic()` asserts that rendering kernel version does not panic
     ///
+    #[test]
     fn render_does_not_panic() {
         let data = KernelService.collect().unwrap();
         KernelService.render("  Kernel:", &data, &Colors::new(false));

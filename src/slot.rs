@@ -1,8 +1,11 @@
 /// `SlotFilter` represents the three operating modes of the `-s` flag
 pub enum SlotFilter {
-    Default,                  // No `-s` flag: render the full default utility output
-    ShowLabeled,              // `-s` with no argument: render labeled output and exit
-    Custom(Vec<ServiceSlot>), // `-s TOKENS`: render only the specified slots in the given order
+    /// No `-s` flag: render the full default utility output
+    Default,
+    /// `-s` with no argument: render labeled output and exit
+    ShowLabeled,
+    /// `-s TOKENS`: render only the specified slots in the given order
+    Custom(Vec<ServiceSlot>),
 }
 
 /// `SlotMeta` bundles a slot's `-s` token, display label, and its human-readable description
@@ -120,29 +123,41 @@ impl ServiceSlot {
     }
 }
 
+impl SlotFilter {
+    /// `to_active_slots()` returns `Some(active slots)` for renderable filters, or `None` for `ShowLabeled`
+    ///
+    pub fn to_active_slots(&self) -> Option<Vec<ServiceSlot>> {
+        match self {
+            Self::Default => Some(ServiceSlot::all()),
+            Self::Custom(slots) => Some(slots.clone()),
+            Self::ShowLabeled => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     // ServiceSlot::all() test
 
-    #[test]
     /// `all_returns_every_defined_slot()` asserts that all defined slots are returned by `all()`
     ///
+    #[test]
     fn all_returns_every_defined_slot() {
         assert_eq!(ServiceSlot::all().len(), 11);
     }
 
-    #[test]
     /// `all_first_slot_is_os()` asserts that the first slot in the default list is `Os`
     ///
+    #[test]
     fn all_first_slot_is_os() {
         assert_eq!(ServiceSlot::all()[0], ServiceSlot::Os);
     }
 
-    #[test]
     /// `all_last_slot_is_usr()` asserts that the last slot in the default list is `Usr`
     ///
+    #[test]
     fn all_last_slot_is_usr() {
         assert_eq!(
             ServiceSlot::all().last().copied().unwrap(),
@@ -150,9 +165,9 @@ mod tests {
         );
     }
 
-    #[test]
     /// `all_contains_no_duplicates()` asserts that the slot list contains no duplicates
     ///
+    #[test]
     fn all_contains_no_duplicates() {
         let slots = ServiceSlot::all();
         let mut seen = std::collections::HashSet::new();
@@ -163,40 +178,40 @@ mod tests {
 
     // ServiceSlot::token() test
 
-    #[test]
     /// `token_os_is_uppercase_os()` asserts that the token for the `Os` slot is "OS"
     ///
+    #[test]
     fn token_os_is_uppercase_os() {
         assert_eq!(ServiceSlot::Os.token(), "OS");
     }
 
-    #[test]
     /// `token_hst_is_uppercase_hst()` asserts that the token for the `Hst` slot is "HST"
     ///
+    #[test]
     fn token_hst_is_uppercase_hst() {
         assert_eq!(ServiceSlot::Hst.token(), "HST");
     }
 
-    #[test]
     /// `token_cpuu_has_double_u()` asserts that the token for the `CpuU` slot is "CPUU"
     ///
+    #[test]
     fn token_cpuu_has_double_u() {
         // Regression guard: "CPUU" is easy to mistype as "CPU" when adding new slots
         assert_eq!(ServiceSlot::CpuU.token(), "CPUU");
     }
 
-    #[test]
     /// `all_tokens_are_non_empty()` asserts that all slot tokens are non-empty
     ///
+    #[test]
     fn all_tokens_are_non_empty() {
         for slot in ServiceSlot::all() {
             assert!(!slot.token().is_empty(), "{slot:?} has an empty token");
         }
     }
 
-    #[test]
     /// `all_tokens_are_uppercase()` asserts that all slot tokens are uppercase
     ///
+    #[test]
     fn all_tokens_are_uppercase() {
         for slot in ServiceSlot::all() {
             let token = slot.token();
@@ -210,9 +225,9 @@ mod tests {
 
     // ServiceSlot::description() test
 
-    #[test]
     /// `all_descriptions_are_non_empty()` asserts that all slot descriptions are non-empty
     ///
+    #[test]
     fn all_descriptions_are_non_empty() {
         for slot in ServiceSlot::all() {
             assert!(
@@ -224,19 +239,19 @@ mod tests {
 
     // ServiceSlot::label() test
 
-    #[test]
     /// `all_labels_are_non_empty()` asserts that all slot labels are non-empty
     ///
+    #[test]
     fn all_labels_are_non_empty() {
         for slot in ServiceSlot::all() {
             assert!(!slot.label().is_empty(), "{slot:?} has an empty label");
         }
     }
 
-    #[test]
     /// `all_labels_start_with_spaces_and_end_with_colon()` asserts that all slot labels have two
     /// leading spaces and a trailing colon
     ///
+    #[test]
     fn all_labels_start_with_spaces_and_end_with_colon() {
         for slot in ServiceSlot::all() {
             let label = slot.label();
@@ -251,28 +266,28 @@ mod tests {
         }
     }
 
-    #[test]
     /// `label_dsku_is_disk_usage()` asserts that the label for the `DskU` slot is correct
     ///
+    #[test]
     fn label_dsku_is_disk_usage() {
         assert_eq!(ServiceSlot::DskU.label(), "  Disk usage:");
     }
 
     // ServiceSlot::parse_list() test
 
-    #[test]
     /// `parse_list_single_known_token()` asserts that parsing a single known token succeeds
     ///
+    #[test]
     fn parse_list_single_known_token() {
         let result = ServiceSlot::parse_list("OS");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), vec![ServiceSlot::Os]);
     }
 
-    #[test]
     /// `parse_list_multiple_tokens_preserves_order()` asserts that parsing multiple tokens
     /// preserves their order
     ///
+    #[test]
     fn parse_list_multiple_tokens_preserves_order() {
         let result = ServiceSlot::parse_list("OS-CPU-GPU");
         assert!(result.is_ok());
@@ -283,9 +298,9 @@ mod tests {
         );
     }
 
-    #[test]
     /// `parse_list_is_case_insensitive()` asserts that token parsing is case-insensitive
     ///
+    #[test]
     fn parse_list_is_case_insensitive() {
         let lower = ServiceSlot::parse_list("os-cpu");
         let upper = ServiceSlot::parse_list("OS-CPU");
@@ -294,10 +309,10 @@ mod tests {
         assert_eq!(mixed.unwrap(), upper.unwrap());
     }
 
-    #[test]
     /// `parse_list_all_tokens_round_trips()` asserts that parsing the joined string of all tokens
     /// round-trips correctly
     ///
+    #[test]
     fn parse_list_all_tokens_round_trips() {
         // Build a hyphen-joined string from the canonical all() order and
         // verify it round-trips back to the same vec
@@ -311,50 +326,49 @@ mod tests {
         assert_eq!(parsed, canonical);
     }
 
-    #[test]
     /// `parse_list_unknown_token_returns_err_containing_token()` asserts that parsing an unknown
     /// token returns an error containing that token
     ///
+    #[test]
     fn parse_list_unknown_token_returns_err_containing_token() {
         let result = ServiceSlot::parse_list("INVALID");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("INVALID"));
     }
-
-    #[test]
     /// `parse_list_partially_invalid_fails_on_bad_token()` asserts that parsing a list containing
     /// an invalid token fails and references the bad token
     ///
+    #[test]
     fn parse_list_partially_invalid_fails_on_bad_token() {
         let result = ServiceSlot::parse_list("OS-BOGUS-CPU");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("BOGUS"));
     }
 
-    #[test]
     /// `parse_list_empty_string_returns_err()` asserts that parsing an empty string returns an
     /// error
     ///
+    #[test]
     fn parse_list_empty_string_returns_err() {
         let result = ServiceSlot::parse_list("");
         assert!(result.is_err(), "empty input must not silently succeed");
         assert_eq!(result.unwrap_err(), "service token list cannot be empty");
     }
 
-    #[test]
     /// `parse_list_whitespace_only_returns_err()` asserts that parsing whitespace-only input
     /// returns an error
     ///
+    #[test]
     fn parse_list_whitespace_only_returns_err() {
         let result = ServiceSlot::parse_list("   ");
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "service token list cannot be empty");
     }
 
-    #[test]
     /// `parse_list_duplicate_tokens_are_currently_allowed()` asserts that duplicate tokens are
     /// permitted in parsing
     ///
+    #[test]
     fn parse_list_duplicate_tokens_are_currently_allowed() {
         let result = ServiceSlot::parse_list("OS-OS-CPU");
         assert!(result.is_ok());

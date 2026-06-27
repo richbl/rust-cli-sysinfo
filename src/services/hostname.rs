@@ -34,10 +34,10 @@ mod tests {
     use super::*;
     use crate::presentation::colors::Colors;
 
-    #[test]
     /// `collect_returns_ok_with_non_empty_hostname()` asserts that hostname collection succeeds
     /// and returns a non-empty hostname
     ///
+    #[test]
     fn collect_returns_ok_with_non_empty_hostname() {
         let result = HostnameService.collect();
         assert!(result.is_ok(), "collect() must not error on Linux");
@@ -48,9 +48,9 @@ mod tests {
         );
     }
 
-    #[test]
     /// `render_does_not_panic()` asserts that rendering hostname does not panic
     ///
+    #[test]
     fn render_does_not_panic() {
         let data = HostnameService.collect().unwrap();
 

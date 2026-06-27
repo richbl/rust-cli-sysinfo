@@ -29,12 +29,12 @@ impl Service for GpuService {
     /// `render()` renders GPU model name(s) as a single row, newline-separated for multiple GPUs
     ///
     fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+        let separator = format!("\n{:width$}", "", width = label.len() + 1);
         let gpu_str = if data.models.is_empty() {
             "Unknown".to_string()
         } else {
-            data.models.join("\n                 ")
+            data.models.join(&separator)
         };
-
         print_row(label, &gpu_str, &Threshold::None, c);
     }
 }

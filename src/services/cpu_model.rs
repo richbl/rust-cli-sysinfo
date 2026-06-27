@@ -60,19 +60,19 @@ mod tests {
     use super::*;
     use crate::presentation::colors::Colors;
 
-    #[test]
     /// `collect_returns_ok_on_linux()` asserts that CPU model collection succeeds on a Linux
     /// system
     ///
+    #[test]
     fn collect_returns_ok_on_linux() {
         let result = CpuModelService.collect();
         assert!(result.is_ok());
     }
 
-    #[test]
     /// `model_name_is_some_and_non_empty()` asserts that CPU model name is retrieved and is
     /// non-empty
     ///
+    #[test]
     fn model_name_is_some_and_non_empty() {
         let data = CpuModelService.collect().unwrap();
         assert!(
@@ -82,9 +82,9 @@ mod tests {
         assert!(!data.model.unwrap().is_empty());
     }
 
-    #[test]
     /// `render_does_not_panic()` asserts that rendering CPU model info does not panic
     ///
+    #[test]
     fn render_does_not_panic() {
         let data = CpuModelService.collect().unwrap();
         CpuModelService.render("  CPU:", &data, &Colors::new(false));

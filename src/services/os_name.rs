@@ -49,19 +49,19 @@ mod tests {
     use super::*;
     use crate::presentation::colors::Colors;
 
-    #[test]
     /// `collect_returns_ok_with_non_empty_name()` asserts that OS name collection succeeds and
     /// returns a non-empty name
     ///
+    #[test]
     fn collect_returns_ok_with_non_empty_name() {
         let result = OsService.collect();
         assert!(result.is_ok());
         assert!(!result.unwrap().name.is_empty());
     }
 
-    #[test]
     /// `render_does_not_panic()` asserts that rendering OS name does not panic
     ///
+    #[test]
     fn render_does_not_panic() {
         let data = OsService.collect().unwrap();
         OsService.render("  OS:", &data, &Colors::new(false));

@@ -12,7 +12,14 @@
 [dev-dependencies]
   tempfile = "3"
 
+[profile.release]
+  lto = "thin"      # inter-crate dead code elimination
+  strip = true      # remove debug symbols from the binary
+  opt-level = 3
+  codegen-units = 1 # maximize optimization at the cost of compile time
+
 [lints.clippy]
   all = "warn"
   pedantic = "warn"
   cognitive_complexity = "warn"
+  panic = "warn"

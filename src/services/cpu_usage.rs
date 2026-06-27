@@ -58,19 +58,16 @@ impl Service for CpuUsageService {
 ///
 fn read_cpu_snap() -> Option<CpuSnap> {
     let line = read_first_line("/proc/stat")?;
-    let mut fields = line
+    let fields: Vec<u64> = line
         .split_whitespace()
-        .skip(1) // skip the "cpu" label
-        .filter_map(|v| v.parse::<u64>().ok());
+        .skip(1)
+        .filter_map(|v| v.parse().ok())
+        .collect();
 
-    let user = fields.next().unwrap_or(0);
-    let nice = fields.next().unwrap_or(0);
-    let system = fields.next().unwrap_or(0);
-    let idle = fields.next().unwrap_or(0);
-    let iowait = fields.next().unwrap_or(0);
-    let irq = fields.next().unwrap_or(0);
-    let softirq = fields.next().unwrap_or(0);
-    let steal = fields.next().unwrap_or(0);
+    let f = |i: usize| fields.get(i).copied().unwrap_or(0);
+
+    let (user, nice, system, idle, iowait, irq, softirq, steal) =
+        (f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7));
 
     Some(CpuSnap {
         total: user + nice + system + idle + iowait + irq + softirq + steal,

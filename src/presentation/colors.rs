@@ -48,9 +48,9 @@ mod tests {
 
     // Colors::new(true) test
 
-    #[test]
     /// `enabled_colors_are_non_empty()` asserts that ANSI color fields are non-empty when enabled
     ///
+    #[test]
     fn enabled_colors_are_non_empty() {
         let c = Colors::new(true);
         assert!(!c.red.is_empty(), "red should be non-empty when enabled");
@@ -70,10 +70,10 @@ mod tests {
         );
     }
 
-    #[test]
     /// `enabled_colors_start_with_escape_sequence()` asserts that ANSI color fields start with the
     /// escape sequence when enabled
     ///
+    #[test]
     fn enabled_colors_start_with_escape_sequence() {
         let c = Colors::new(true);
         // All ANSI codes must begin with ESC (0x1b)
@@ -87,9 +87,9 @@ mod tests {
 
     // Colors::new(false) test
 
-    #[test]
     /// `disabled_colors_are_all_empty()` asserts that color fields are empty when disabled
     ///
+    #[test]
     fn disabled_colors_are_all_empty() {
         let c = Colors::new(false);
         assert!(c.red.is_empty(), "red should be empty when disabled");

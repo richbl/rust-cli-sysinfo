@@ -16,7 +16,7 @@ use crate::cli::Opts;
 use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, SEP};
 use crate::core::error::AppError;
 use crate::presentation::colors::Colors;
-use crate::presentation::format::{Threshold, print_row};
+use crate::presentation::format::print_row_error;
 use crate::services::AnyService;
 use crate::services::cpu_model::CpuModelService;
 use crate::services::cpu_usage::CpuUsageService;
@@ -29,7 +29,7 @@ use crate::services::memory::MemoryService;
 use crate::services::os_name::OsService;
 use crate::services::uptime::UptimeService;
 use crate::services::users::UsersService;
-use crate::slot::{ServiceSlot, SlotFilter};
+use crate::slot::ServiceSlot;
 
 /// `CollectResult` is the type-erased result of a single service's `collect()` call
 type CollectResult = Result<Box<dyn Any + Send>, AppError>;
@@ -86,7 +86,7 @@ fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
 fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
     let label = id.label();
     let value = format!("n/a - {error}");
-    print_row(label, &value, &Threshold::None, colors);
+    print_row_error(label, &value, colors);
 }
 
 /// `render_labeled()` prints the token reference table (output of `-s` with no argument)
@@ -205,15 +205,9 @@ fn main() {
     let colors = Colors::new(opts.color);
 
     // -s with no argument: print the token reference table and exit
-    if matches!(opts.slot_filter, SlotFilter::ShowLabeled) {
+    let Some(active_slots) = opts.slot_filter.to_active_slots() else {
         render_labeled(&colors);
         return;
-    }
-
-    let active_slots: Vec<ServiceSlot> = match &opts.slot_filter {
-        SlotFilter::Default => ServiceSlot::all(),
-        SlotFilter::Custom(slots) => slots.clone(),
-        SlotFilter::ShowLabeled => unreachable!(),
     };
 
     if opts.clear {

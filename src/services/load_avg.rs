@@ -52,10 +52,10 @@ mod tests {
     use super::*;
     use crate::presentation::colors::Colors;
 
-    #[test]
     /// `collect_returns_ok_with_some_loadavg()` asserts that load average collection succeeds and
     /// returns load averages on Linux
     ///
+    #[test]
     fn collect_returns_ok_with_some_loadavg() {
         let result = LoadAvgService.collect();
         assert!(result.is_ok());
@@ -66,10 +66,10 @@ mod tests {
         );
     }
 
-    #[test]
     /// `all_three_averages_are_non_negative()` asserts that all three load averages are
     /// non-negative
     ///
+    #[test]
     fn all_three_averages_are_non_negative() {
         let data = LoadAvgService.collect().unwrap();
         let (l1, l5, l15) = data.loadavg.unwrap();
@@ -78,9 +78,9 @@ mod tests {
         assert!(l15 >= 0.0, "15m load average must be non-negative");
     }
 
-    #[test]
     /// `render_does_not_panic()` asserts that rendering load averages does not panic
     ///
+    #[test]
     fn render_does_not_panic() {
         let data = LoadAvgService.collect().unwrap();
         LoadAvgService.render("  Load Averages:", &data, &Colors::new(false));

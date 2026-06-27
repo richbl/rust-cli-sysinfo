@@ -4,9 +4,12 @@ use crate::constants::{
 };
 
 /// `Threshold` controls value-based color thresholds for utility rows
+///
 pub enum Threshold {
-    None, // No threshold check; the row is rendered in the default color
-    Check { value: f64, warn: f64, crit: f64 }, // Apply thresholds: yellow at `warn`, red at `crit`
+    /// No threshold check; the row is rendered in the default color
+    None,
+    /// Apply color thresholds: yellow at `warn`, red at `crit`
+    Check { value: f64, warn: f64, crit: f64 },
 }
 
 /// `color_for_threshold()` selects the appropriate ANSI color string based on the threshold
@@ -28,6 +31,12 @@ pub fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
     println!("{label:<16} {color}{value}{}", c.reset);
 }
 
+/// `print_row_error()` prints a left-aligned label/value row, coloring the value in red
+///
+pub fn print_row_error(label: &str, value: &str, c: &Colors) {
+    println!("{label:<16} {}{value}{}", c.red, c.reset);
+}
+
 /// `format_uptime()` formats a duration in seconds as `DDDd:HHh:MMm:SSs`
 ///
 #[must_use]
@@ -45,65 +54,62 @@ pub fn format_uptime(seconds: u64) -> String {
 ///
 #[must_use]
 pub fn format_size(kb: u64) -> String {
-    // Divisors are powers of 1024 (all expressed in KB)
+    const UNITS: &[(f64, &str)] = &[(KB_PER_TB, "T"), (KB_PER_GB, "G"), (KB_PER_MB, "M")];
 
     #[allow(clippy::cast_precision_loss)]
     let k = kb as f64;
 
-    if k >= KB_PER_TB {
-        format!("{:.1}T", k / KB_PER_TB)
-    } else if k >= KB_PER_GB {
-        format!("{:.1}G", k / KB_PER_GB)
-    } else if k >= KB_PER_MB {
-        format!("{:.1}M", k / KB_PER_MB)
-    } else {
-        format!("{kb}K")
+    // Check for any unit prefix
+    for &(threshold, suffix) in UNITS {
+        if k >= threshold {
+            return format!("{:.1}{suffix}", k / threshold);
+        }
     }
+
+    format!("{kb}K")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
     /// `threshold_none_is_constructible()` asserts that the `Threshold::None` variant is
     /// constructible
-    ///
+    #[test]
     fn threshold_none_is_constructible() {
         assert!(matches!(Threshold::None, Threshold::None));
     }
 
-    #[test]
     /// `threshold_check_stores_all_fields()` asserts that `Threshold::Check` correctly stores its
     /// parameters
-    ///
-    fn threshold_check_stores_all_fields() {
+    #[test]
+    fn threshold_check_stores_all_fields() -> Result<(), String> {
         let t = Threshold::Check {
             value: 42.0,
             warn: 70.0,
             crit: 90.0,
         };
-        // Verify pattern-match access to all fields
-        if let Threshold::Check { value, warn, crit } = t {
-            assert!((value - 42.0).abs() < f64::EPSILON);
-            assert!((warn - 70.0).abs() < f64::EPSILON);
-            assert!((crit - 90.0).abs() < f64::EPSILON);
-        } else {
-            panic!("expected Threshold::Check");
-        }
+
+        // Unpack the variant
+        let Threshold::Check { value, warn, crit } = t else {
+            return Err("expected Threshold::Check, got a different variant".to_string());
+        };
+
+        assert!((value - 42.0).abs() < f64::EPSILON);
+        assert!((warn - 70.0).abs() < f64::EPSILON);
+        assert!((crit - 90.0).abs() < f64::EPSILON);
+        Ok(())
     }
 
-    #[test]
     /// `color_for_threshold_none_returns_reset()` asserts that `None` returns the reset color
-    ///
+    #[test]
     fn color_for_threshold_none_returns_reset() {
         let c = Colors::new(true);
         assert_eq!(color_for_threshold(&Threshold::None, &c), c.reset);
     }
 
-    #[test]
     /// `color_for_threshold_below_warn_returns_green()` asserts that a value < warn returns green
-    ///
+    #[test]
     fn color_for_threshold_below_warn_returns_green() {
         let c = Colors::new(true);
         let t = Threshold::Check {
@@ -114,9 +120,8 @@ mod tests {
         assert_eq!(color_for_threshold(&t, &c), c.green);
     }
 
-    #[test]
     /// `color_for_threshold_above_warn_returns_yellow()` asserts that a value >= warn returns yellow
-    ///
+    #[test]
     fn color_for_threshold_above_warn_returns_yellow() {
         let c = Colors::new(true);
         let t = Threshold::Check {
@@ -127,9 +132,8 @@ mod tests {
         assert_eq!(color_for_threshold(&t, &c), c.yellow);
     }
 
-    #[test]
     /// `color_for_threshold_above_crit_returns_red()` asserts that a value >= crit returns red
-    ///
+    #[test]
     fn color_for_threshold_above_crit_returns_red() {
         let c = Colors::new(true);
         let t = Threshold::Check {

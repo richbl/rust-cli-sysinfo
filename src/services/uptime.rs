@@ -4,7 +4,7 @@ use crate::presentation::format::format_uptime;
 
 /// `UptimeInfo` contains the system uptime in seconds read from `/proc/uptime`
 pub struct UptimeInfo {
-    pub uptime_secs: Option<u64>,
+    pub uptime_secs: u64,
 }
 
 /// `UptimeService` is a struct for collecting and rendering system uptime
@@ -17,14 +17,13 @@ impl Service for UptimeService {
     /// `collect()` reads the uptime in seconds from `/proc/uptime`
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let uptime_secs = read_first_line("/proc/uptime").and_then(|raw| {
-            raw.split_whitespace()
-                .next()?
-                .split('.')
-                .next()?
-                .parse()
-                .ok()
-        });
+        let raw = read_first_line("/proc/uptime")?;
+        let uptime_secs = raw
+            .split_whitespace()
+            .next()
+            .and_then(|s| s.split('.').next())
+            .and_then(|s| s.parse().ok())
+            .ok_or_else(|| AppError::DataUnavailable("failed to parse uptime".into()))?;
 
         Ok(UptimeInfo { uptime_secs })
     }
@@ -32,10 +31,7 @@ impl Service for UptimeService {
     /// `render()` renders system uptime formatted as `DDDd:HHh:MMm:SSs`
     ///
     fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
-        let uptime_str = data
-            .uptime_secs
-            .map_or_else(|| "unknown".to_string(), format_uptime);
-
+        let uptime_str = format_uptime(data.uptime_secs);
         print_row(label, &uptime_str, &Threshold::None, c);
     }
 }
@@ -55,8 +51,8 @@ mod tests {
         assert!(result.is_ok());
         let data = result.unwrap();
         assert!(
-            data.uptime_secs.is_some(),
-            "uptime_secs must be Some on a running Linux system"
+            data.uptime_secs > 0,
+            "uptime_secs must be > 0 on a running system"
         );
     }
 
@@ -66,7 +62,7 @@ mod tests {
     fn uptime_is_positive() {
         let data = UptimeService.collect().unwrap();
         assert!(
-            data.uptime_secs.unwrap() > 0,
+            data.uptime_secs > 0,
             "uptime must be > 0 on a running system"
         );
     }

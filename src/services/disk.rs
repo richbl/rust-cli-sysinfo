@@ -15,6 +15,14 @@ pub struct DiskService {
     pub mount: String,
 }
 
+impl DiskService {
+    pub fn new(ctx: &crate::core::context::ServiceContext) -> Self {
+        Self {
+            mount: ctx.disk_mount.to_string_lossy().into_owned(),
+        }
+    }
+}
+
 /// `DiskService` implements the `Service` trait
 impl Service for DiskService {
     type Data = DiskInfo;

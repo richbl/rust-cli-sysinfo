@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use pci_ids::{Device, FromId, Vendor};
 
 use super::prelude::*;
+use crate::core::error::AppError;
 use crate::core::utils::read_hex_u16;
 
 /// Deduplicated list of GPU display names discovered via `/sys/class/drm`
@@ -64,8 +65,9 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
             continue; // Skip if path cannot be resolved
         };
 
+        // Deduplicate by canonical path
         if seen_paths.insert(canonical_path)
-            && let Some(name) = gpu_name_from_card(&path)
+            && let Some(name) = gpu_name_from_card(&path)?
         {
             names.push(name);
         }
@@ -77,16 +79,33 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
 
 /// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device
 /// IDs
+/// Returns `Ok(None)` if the card does not expose valid PCI IDs (e.g. virtual cards)
 ///
-fn gpu_name_from_card(card_path: &Path) -> Option<String> {
+fn gpu_name_from_card(card_path: &Path) -> Result<Option<String>, AppError> {
     let device_path = card_path.join("device");
 
-    let vendor_id = read_hex_u16(&device_path.join("vendor"))?;
-    let device_id = read_hex_u16(&device_path.join("device"))?;
+    // Read vendor ID, skipping the card gracefully if the file is missing/inaccessible
+    let vendor_id = match read_hex_u16(&device_path.join("vendor")) {
+        Ok(id) => id,
+        Err(AppError::Io(_)) => return Ok(None),
+        Err(e) => return Err(e),
+    };
 
-    let vendor = Vendor::from_id(vendor_id)?;
+    // Read device ID, skipping the card gracefully if the file is missing/inaccessible
+    let device_id = match read_hex_u16(&device_path.join("device")) {
+        Ok(id) => id,
+        Err(AppError::Io(_)) => return Ok(None),
+        Err(e) => return Err(e),
+    };
 
-    Device::from_vid_pid(vendor_id, device_id)
-        .map(|device| format!("{} {}", vendor.name(), device.name()))
-        .or_else(|| Some(vendor.name().to_owned()))
+    let Some(vendor) = Vendor::from_id(vendor_id) else {
+        return Ok(None);
+    };
+
+    let name = Device::from_vid_pid(vendor_id, device_id).map_or_else(
+        || vendor.name().to_owned(),
+        |device| format!("{} {}", vendor.name(), device.name()),
+    );
+
+    Ok(Some(name))
 }

@@ -28,9 +28,9 @@ pub const SECS_PER_HOUR: u64 = 3_600;
 pub const SECS_PER_DAY: u64 = 86_400;
 
 // Size conversions for `format_size()`
-pub const KB_PER_MB: f64 = 1_024.0;
-pub const KB_PER_GB: f64 = 1_048_576.0;
-pub const KB_PER_TB: f64 = 1_073_741_824.0;
+pub const KB_PER_MB: u64 = 1_024;
+pub const KB_PER_GB: u64 = 1_048_576;
+pub const KB_PER_TB: u64 = 1_073_741_824;
 
 // Warning/Critical thresholds percentages
 pub const CPU_WARN_PCT: f64 = 70.0;

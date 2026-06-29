@@ -2,39 +2,42 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
+use crate::core::error::AppError;
+
 /// `read_first_line()` reads the first line of a file at the given path
 ///
-pub fn read_first_line(path: impl AsRef<std::path::Path>) -> Option<String> {
-    let file = fs::File::open(path.as_ref()).ok()?;
+pub fn read_first_line(path: impl AsRef<std::path::Path>) -> Result<String, AppError> {
+    let file = fs::File::open(path.as_ref())?;
     let mut line = String::new();
 
-    io::BufReader::new(file).read_line(&mut line).ok()?;
+    io::BufReader::new(file).read_line(&mut line)?;
 
     let len = line.trim_end_matches(['\r', '\n']).len();
     line.truncate(len);
 
-    Some(line)
+    Ok(line)
 }
 
 /// `read_hex_u16()` reads a hexadecimal value from a file and returns it as a u16
 ///
-pub fn read_hex_u16(path: &Path) -> Option<u16> {
-    let contents = fs::read_to_string(path).ok()?;
+pub fn read_hex_u16(path: &Path) -> Result<u16, AppError> {
+    let contents = fs::read_to_string(path)?;
     let value = contents.trim().trim_start_matches("0x");
 
-    u16::from_str_radix(value, 16).ok()
+    u16::from_str_radix(value, 16)
+        .map_err(|_| AppError::DataUnavailable(format!("invalid hex u16 in {}", path.display())))
 }
 
 /// `c_char_array_to_string()` safely converts a fixed-size C character array (null-terminated)
-/// from a `libc` struct into a Rust `String`.
+/// from a `libc` struct into a Rust `String`
 ///
 pub fn c_char_array_to_string(c_array: &[libc::c_char]) -> String {
-    c_array
+    let bytes: Vec<u8> = c_array
         .iter()
+        .take_while(|&&c| c != 0)
         .map(|&c| c.cast_unsigned())
-        .take_while(|&c| c != 0)
-        .map(|c| c as char)
-        .collect()
+        .collect();
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 #[cfg(test)]
@@ -59,8 +62,8 @@ mod tests {
     fn read_first_line_returns_only_first_line() {
         let f = temp_file_with("first\nsecond\nthird\n");
         assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")),
-            Some("first".to_string())
+            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
+            "first".to_string()
         );
     }
 
@@ -75,40 +78,35 @@ mod tests {
     }
 
     /// `read_first_line_no_trailing_newline_in_file()` ensures that the function returns
-    /// `Some()` even if the file has no trailing newline
+    /// `Ok()` even if the file has no trailing newline
     ///
     #[test]
     fn read_first_line_no_trailing_newline_in_file() {
         let f = temp_file_with("bare");
         assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")),
-            Some("bare".to_string())
+            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
+            "bare".to_string()
         );
     }
 
-    /// `read_first_line_empty_file_returns_some_empty_string()` ensures that the function returns
-    /// `Some("")` even if the file is empty
+    /// `read_first_line_empty_file_returns_ok_empty_string()` ensures that the function returns
+    /// `Ok("")` even if the file is empty
     ///
     #[test]
-    fn read_first_line_empty_file_returns_some_empty_string() {
-        // An empty file has no content but open() succeeds and read_line() returns Ok(0), so the
-        // function returns Some("") rather than None
+    fn read_first_line_empty_file_returns_ok_empty_string() {
         let f = temp_file_with("");
         assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")),
-            Some(String::new())
+            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
+            String::new()
         );
     }
 
-    /// `read_first_line_missing_file_returns_none()` ensures that the function returns `None` if the
+    /// `read_first_line_missing_file_returns_err()` ensures that the function returns `Err` if the
     /// file is missing
     ///
     #[test]
-    fn read_first_line_missing_file_returns_none() {
-        assert_eq!(
-            read_first_line("/nonexistent/rcs_missing_file_for_test"),
-            None
-        );
+    fn read_first_line_missing_file_returns_err() {
+        assert!(read_first_line("/nonexistent/rcs_missing_file_for_test").is_err());
     }
 
     /// `read_first_line_preserves_interior_whitespace()` ensures that the function preserves
@@ -118,8 +116,8 @@ mod tests {
     fn read_first_line_preserves_interior_whitespace() {
         let f = temp_file_with("  two  spaces  \n");
         assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")),
-            Some("  two  spaces  ".to_string())
+            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
+            "  two  spaces  ".to_string()
         );
     }
 
@@ -129,7 +127,7 @@ mod tests {
     #[test]
     fn read_hex_u16_with_0x_prefix() {
         let f = temp_file_with("0x8086\n");
-        assert_eq!(read_hex_u16(f.path()), Some(0x8086_u16));
+        assert_eq!(read_hex_u16(f.path()).unwrap(), 0x8086_u16);
     }
 
     /// `read_hex_u16_without_0x_prefix()` reads a hex value from a file and asserts that it is
@@ -138,7 +136,7 @@ mod tests {
     #[test]
     fn read_hex_u16_without_prefix() {
         let f = temp_file_with("8086\n");
-        assert_eq!(read_hex_u16(f.path()), Some(0x8086_u16));
+        assert_eq!(read_hex_u16(f.path()).unwrap(), 0x8086_u16);
     }
 
     /// `read_hex_u16_max_value()` reads a hex value from a file and asserts that it is `u16::MAX`
@@ -146,7 +144,7 @@ mod tests {
     #[test]
     fn read_hex_u16_max_value() {
         let f = temp_file_with("0xFFFF\n");
-        assert_eq!(read_hex_u16(f.path()), Some(u16::MAX));
+        assert_eq!(read_hex_u16(f.path()).unwrap(), u16::MAX);
     }
 
     /// `read_hex_u16_zero_value()` reads a hex value from a file and asserts that it is 0
@@ -154,44 +152,43 @@ mod tests {
     #[test]
     fn read_hex_u16_zero_value() {
         let f = temp_file_with("0x0000\n");
-        assert_eq!(read_hex_u16(f.path()), Some(0_u16));
+        assert_eq!(read_hex_u16(f.path()).unwrap(), 0_u16);
     }
 
-    /// `read_hex_u16_overflow_u16_returns_none()` ensures that the function returns `None` if the
+    /// `read_hex_u16_overflow_u16_returns_err()` ensures that the function returns `Err` if the
     /// value exceeds `u16::MAX`
     ///
     #[test]
-    fn read_hex_u16_overflow_u16_returns_none() {
-        // 0x10000 exceeds u16::MAX — must not wrap or panic
+    fn read_hex_u16_overflow_u16_returns_err() {
         let f = temp_file_with("0x10000\n");
-        assert_eq!(read_hex_u16(f.path()), None);
+        assert!(read_hex_u16(f.path()).is_err());
     }
 
-    /// `read_hex_u16_non_hex_content_returns_none()` ensures that the function returns `None` if
+    /// `read_hex_u16_non_hex_content_returns_err()` ensures that the function returns `Err` if
     /// the file contains non-hex content
     ///
     #[test]
-    fn read_hex_u16_non_hex_content_returns_none() {
+    fn read_hex_u16_non_hex_content_returns_err() {
         let f = temp_file_with("not_hex\n");
-        assert_eq!(read_hex_u16(f.path()), None);
+        assert!(read_hex_u16(f.path()).is_err());
     }
 
-    /// `read_hex_u16_empty_file_returns_none()` ensures that the function returns `None` if the
+    /// `read_hex_u16_empty_file_returns_err()` ensures that the function returns `Err` if the
     /// file is empty
     ///
     #[test]
-    fn read_hex_u16_empty_file_returns_none() {
+    fn read_hex_u16_empty_file_returns_err() {
         let f = temp_file_with("");
-        assert_eq!(read_hex_u16(f.path()), None);
+        assert!(read_hex_u16(f.path()).is_err());
     }
 
-    /// `read_hex_u16_missing_file_returns_none()` ensures that the function returns `None` if the
+    /// `read_hex_u16_missing_file_returns_err()` ensures that the function returns `Err` if the
     /// file is missing
     ///
     #[test]
-    fn read_hex_u16_missing_file_returns_none() {
+    fn read_hex_u16_missing_file_returns_err() {
         let path = std::path::Path::new("/nonexistent/rcs_missing_hex_for_test");
-        assert_eq!(read_hex_u16(path), None);
+        assert!(read_hex_u16(path).is_err());
     }
 
     /// `read_hex_u16_trims_surrounding_whitespace()` ensures that the function trims leading and
@@ -199,9 +196,8 @@ mod tests {
     ///
     #[test]
     fn read_hex_u16_trims_surrounding_whitespace() {
-        // Verify that leading/trailing whitespace (common in sysfs files) is handled
         let f = temp_file_with("  0x10DE  \n");
-        assert_eq!(read_hex_u16(f.path()), Some(0x10DE_u16));
+        assert_eq!(read_hex_u16(f.path()).unwrap(), 0x10DE_u16);
     }
 
     /// `c_char_array_to_string_extracts_null_terminated_string()` asserts that it extracts up to

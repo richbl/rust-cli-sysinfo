@@ -7,13 +7,24 @@ pub mod kernel;
 pub mod load_avg;
 pub mod memory;
 pub mod os_name;
+pub mod registry;
 pub mod uptime;
 pub mod users;
 
-use std::any::Any;
-
 use crate::core::error::AppError;
 use crate::presentation::colors::Colors;
+
+use cpu_model::{CpuModelInfo, CpuModelService};
+use cpu_usage::{CpuUsageInfo, CpuUsageService};
+use disk::{DiskInfo, DiskService};
+use gpu::{GpuInfo, GpuService};
+use hostname::{HostnameInfo, HostnameService};
+use kernel::{KernelInfo, KernelService};
+use load_avg::{LoadAvgInfo, LoadAvgService};
+use memory::{MemInfo, MemoryService};
+use os_name::{OsInfo, OsService};
+use uptime::{UptimeInfo, UptimeService};
+use users::{UsersInfo, UsersService};
 
 /// `prelude` re-exports the types shared across all service modules, eliminating
 /// duplicate `use` statements in each service file
@@ -37,188 +48,107 @@ pub trait Service {
     fn render(&self, label: &str, data: &Self::Data, colors: &Colors);
 }
 
-/// `AnyService` is an object-safe, type-erased counterpart to [`Service`]
-///
-pub trait AnyService: Send + Sync {
-    /// `collect_erased()` calls the underlying service's `collect()`, boxing the
-    /// successful result as `Box<dyn Any>`
-    ///
-    fn collect_erased(&self) -> Result<Box<dyn Any + Send>, AppError>;
-
-    /// `render_erased()` downcasts `data` back to the underlying service's `Data` type
-    /// and calls `render()` with the provided label
-    ///
-    #[must_use = "a type mismatch produces Err; callers must handle the failure case"]
-    fn render_erased(
-        &self,
-        label: &str,
-        data: &(dyn Any + Send),
-        colors: &Colors,
-    ) -> Result<(), AppError>;
+/// `ServiceData` wraps the concrete `Data` struct for every known service
+pub enum ServiceData {
+    Os(OsInfo),
+    Hostname(HostnameInfo),
+    CpuModel(CpuModelInfo),
+    Gpu(GpuInfo),
+    Kernel(KernelInfo),
+    Uptime(UptimeInfo),
+    LoadAvg(LoadAvgInfo),
+    CpuUsage(CpuUsageInfo),
+    Memory(MemInfo),
+    Disk(DiskInfo),
+    Users(UsersInfo),
 }
 
-/// Blanket implementation: every [`Service`] is automatically an [`AnyService`]
-impl<S> AnyService for S
-where
-    S: Service + Send + Sync,
-    S::Data: 'static + Send + Sync,
-{
-    /// `collect_erased()` boxes the successful result of `collect()`
-    ///
-    fn collect_erased(&self) -> Result<Box<dyn Any + Send>, AppError> {
-        self.collect()
-            .map(|data| Box::new(data) as Box<dyn Any + Send>)
-    }
-
-    /// `render_erased()` downcasts `data` to `S::Data` and calls `render()`
-    ///
-    fn render_erased(
-        &self,
-        label: &str,
-        data: &(dyn Any + Send),
-        colors: &Colors,
-    ) -> Result<(), AppError> {
-        let typed = data.downcast_ref::<S::Data>().ok_or_else(|| {
-            AppError::DataUnavailable(format!(
-                "render type mismatch: expected {}, got incompatible Any",
-                std::any::type_name::<S::Data>()
-            ))
-        })?;
-
-        self.render(label, typed, colors);
-        Ok(())
-    }
+/// `AnyService` wraps the concrete service implementations
+pub enum AnyService {
+    Os(OsService),
+    Hostname(HostnameService),
+    CpuModel(CpuModelService),
+    Gpu(GpuService),
+    Kernel(KernelService),
+    Uptime(UptimeService),
+    LoadAvg(LoadAvgService),
+    CpuUsage(CpuUsageService),
+    Memory(MemoryService),
+    Disk(DiskService),
+    Users(UsersService),
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::presentation::colors::Colors;
-
-    // `DoubleService` and `DoubleData` are defined only to exercise the blanket
-    // `AnyService` impl without pulling in any real system service
-    struct DoubleData;
-    struct DoubleService;
-
-    impl Service for DoubleService {
-        type Data = DoubleData;
-
-        fn collect(&self) -> Result<Self::Data, AppError> {
-            Ok(DoubleData)
-        }
-
-        fn render(&self, _label: &str, _data: &Self::Data, _colors: &Colors) {
-            // no-op: render output goes to stdout; only the Result matters here
+impl AnyService {
+    /// `collect()` dispatches to the underlying concrete service and maps the result into the
+    /// corresponding `ServiceData` variant
+    ///
+    pub fn collect(&self) -> Result<ServiceData, AppError> {
+        match self {
+            Self::Os(s) => s.collect().map(ServiceData::Os),
+            Self::Hostname(s) => s.collect().map(ServiceData::Hostname),
+            Self::CpuModel(s) => s.collect().map(ServiceData::CpuModel),
+            Self::Gpu(s) => s.collect().map(ServiceData::Gpu),
+            Self::Kernel(s) => s.collect().map(ServiceData::Kernel),
+            Self::Uptime(s) => s.collect().map(ServiceData::Uptime),
+            Self::LoadAvg(s) => s.collect().map(ServiceData::LoadAvg),
+            Self::CpuUsage(s) => s.collect().map(ServiceData::CpuUsage),
+            Self::Memory(s) => s.collect().map(ServiceData::Memory),
+            Self::Disk(s) => s.collect().map(ServiceData::Disk),
+            Self::Users(s) => s.collect().map(ServiceData::Users),
         }
     }
 
-    /// `collect_erased_returns_ok` asserts that `collect_erased` returns `Ok`
+    /// `render()` hands off rendering to the underlying concrete service
     ///
-    #[test]
-    fn collect_erased_returns_ok() {
-        let result = DoubleService.collect_erased();
-        assert!(
-            result.is_ok(),
-            "collect_erased must not fail for a healthy service"
-        );
-    }
-
-    /// `collect_erased_boxes_correct_type` asserts that `collect_erased` boxes
-    /// the correct type
-    ///
-    #[test]
-    fn collect_erased_boxes_correct_type() {
-        let boxed = DoubleService.collect_erased().unwrap();
-        assert!(
-            boxed.downcast_ref::<DoubleData>().is_some(),
-            "boxed value must downcast to DoubleData"
-        );
-    }
-
-    /// `collect_erased_does_not_downcast_to_wrong_type` asserts that
-    /// `collect_erased` does not downcast to the wrong type
-    ///
-    #[test]
-    fn collect_erased_does_not_downcast_to_wrong_type() {
-        let boxed = DoubleService.collect_erased().unwrap();
-        assert!(
-            boxed.downcast_ref::<u32>().is_none(),
-            "boxed DoubleData must not downcast to u32"
-        );
-    }
-
-    // render_erased: happy path test
-
-    /// `render_erased_correct_type_returns_ok` asserts that `render_erased` returns
-    /// `Ok` when passed the correct type
-    ///
-    #[test]
-    fn render_erased_correct_type_returns_ok() {
-        let data: Box<dyn Any + Send> = Box::new(DoubleData);
-        let result = DoubleService.render_erased("  Test:", data.as_ref(), &Colors::new(false));
-        assert!(result.is_ok(), "render with the correct type must succeed");
-    }
-
-    /// `round_trip_collect_then_render_erased_succeeds` asserts that
-    /// `render_erased` succeeds when passed the result of `collect_erased`
-    ///
-    #[test]
-    fn round_trip_collect_then_render_erased_succeeds() {
-        // Simulates the normal collect_services → render_services pipeline
-        let collected = DoubleService
-            .collect_erased()
-            .expect("collect must not fail");
-        let result =
-            DoubleService.render_erased("  Test:", collected.as_ref(), &Colors::new(false));
-        assert!(
-            result.is_ok(),
-            "a correct collect→render round-trip must always succeed"
-        );
-    }
-
-    // render_erased: type mismatch test
-
-    /// `render_erased_wrong_type_returns_err_not_panics` asserts that `render_erased`
-    /// returns `Err` when passed the wrong type
-    ///
-    #[test]
-    fn render_erased_wrong_type_returns_err_not_panics() {
-        let wrong: Box<dyn Any + Send> = Box::new("this is not DoubleData");
-        let result = DoubleService.render_erased("  Test:", wrong.as_ref(), &Colors::new(false));
-        assert!(
-            result.is_err(),
-            "a type mismatch must produce Err, not a panic"
-        );
-    }
-
-    /// `render_erased_type_mismatch_produces_data_unavailable` asserts that
-    /// `render_erased` returns `DataUnavailable` when passed the wrong type
-    ///
-    #[test]
-    fn render_erased_type_mismatch_produces_data_unavailable() {
-        let wrong: Box<dyn Any + Send> = Box::new(99_u8);
-        let err = DoubleService
-            .render_erased("  Test:", wrong.as_ref(), &Colors::new(false))
-            .unwrap_err();
-        assert!(
-            matches!(err, AppError::DataUnavailable(_)),
-            "type mismatch must produce DataUnavailable, got: {err}"
-        );
-    }
-
-    /// `render_erased_error_message_names_expected_type` asserts that the error
-    /// message names the expected type
-    ///
-    #[test]
-    fn render_erased_error_message_names_expected_type() {
-        let wrong: Box<dyn Any + Send> = Box::new(99_u8);
-        let err = DoubleService
-            .render_erased("  Test:", wrong.as_ref(), &Colors::new(false))
-            .unwrap_err();
-        let msg = err.to_string();
-        assert!(
-            msg.contains("DoubleData"),
-            "error message must name the expected type; got: {msg}"
-        );
+    pub fn render(&self, label: &str, data: &ServiceData, colors: &Colors) -> Result<(), AppError> {
+        match (self, data) {
+            (Self::Os(s), ServiceData::Os(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Hostname(s), ServiceData::Hostname(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::CpuModel(s), ServiceData::CpuModel(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Gpu(s), ServiceData::Gpu(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Kernel(s), ServiceData::Kernel(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Uptime(s), ServiceData::Uptime(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::LoadAvg(s), ServiceData::LoadAvg(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::CpuUsage(s), ServiceData::CpuUsage(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Memory(s), ServiceData::Memory(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Disk(s), ServiceData::Disk(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            (Self::Users(s), ServiceData::Users(d)) => {
+                s.render(label, d, colors);
+                Ok(())
+            }
+            _ => Err(AppError::DataUnavailable(
+                "Service and Data type mismatch".into(),
+            )),
+        }
     }
 }

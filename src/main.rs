@@ -8,77 +8,17 @@ mod presentation;
 mod services;
 mod slot;
 
-use std::any::Any;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
 use crate::cli::Opts;
 use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, SEP};
+use crate::core::context::ServiceContext;
 use crate::core::error::AppError;
 use crate::presentation::colors::Colors;
 use crate::presentation::format::print_row_error;
-use crate::services::AnyService;
-use crate::services::cpu_model::CpuModelService;
-use crate::services::cpu_usage::CpuUsageService;
-use crate::services::disk::DiskService;
-use crate::services::gpu::GpuService;
-use crate::services::hostname::HostnameService;
-use crate::services::kernel::KernelService;
-use crate::services::load_avg::LoadAvgService;
-use crate::services::memory::MemoryService;
-use crate::services::os_name::OsService;
-use crate::services::uptime::UptimeService;
-use crate::services::users::UsersService;
+use crate::services::registry::{CollectResult, ServiceRegistry};
 use crate::slot::ServiceSlot;
-
-/// `CollectResult` is the type-erased result of a single service's `collect()` call
-type CollectResult = Result<Box<dyn Any + Send>, AppError>;
-
-/// `ServiceEntry` pairs a [`ServiceSlot`] identifier with its type-erased service
-/// implementation
-struct ServiceEntry {
-    service: Box<dyn AnyService>,
-}
-
-/// `ServiceEntry` implements `AnyService` via `Box<AnyService>`
-impl ServiceEntry {
-    /// `new()` boxes `service` behind the [`AnyService`] trait
-    ///
-    fn new(service: impl AnyService + 'static) -> Self {
-        Self {
-            service: Box::new(service),
-        }
-    }
-}
-
-/// `build_registry()` constructs one [`ServiceEntry`] for every known service, wiring
-/// in user-supplied options
-///
-fn build_registry(opts: &Opts) -> HashMap<ServiceSlot, ServiceEntry> {
-    let mut map = HashMap::new();
-    map.insert(ServiceSlot::Os, ServiceEntry::new(OsService));
-    map.insert(ServiceSlot::Hst, ServiceEntry::new(HostnameService));
-    map.insert(ServiceSlot::Cpu, ServiceEntry::new(CpuModelService));
-    map.insert(ServiceSlot::Gpu, ServiceEntry::new(GpuService));
-    map.insert(ServiceSlot::Knl, ServiceEntry::new(KernelService));
-    map.insert(ServiceSlot::Upt, ServiceEntry::new(UptimeService));
-    map.insert(ServiceSlot::Load, ServiceEntry::new(LoadAvgService));
-    map.insert(
-        ServiceSlot::CpuU,
-        ServiceEntry::new(CpuUsageService {
-            sample_ms: opts.cpu_sample_ms,
-        }),
-    );
-    map.insert(ServiceSlot::RamU, ServiceEntry::new(MemoryService));
-    map.insert(
-        ServiceSlot::DskU,
-        ServiceEntry::new(DiskService {
-            mount: opts.disk_mount.clone(),
-        }),
-    );
-    map.insert(ServiceSlot::Usr, ServiceEntry::new(UsersService));
-    map
-}
 
 /// `render_service_error()` prints a standard error row for a slot whose data could
 /// not be collected or rendered
@@ -127,20 +67,20 @@ fn render_labeled(c: &Colors) {
 ///
 fn collect_services(
     active_slots: &[ServiceSlot],
-    registry: &HashMap<ServiceSlot, ServiceEntry>,
+    registry: &ServiceRegistry,
 ) -> HashMap<ServiceSlot, CollectResult> {
     let mut collected: HashMap<ServiceSlot, CollectResult> = HashMap::new();
 
     for &id in active_slots {
         collected.entry(id).or_insert_with(|| {
-            registry.get(&id).map_or_else(
+            registry.get(id).map_or_else(
                 || {
                     Err(AppError::DataUnavailable(format!(
                         "no registry entry for slot '{}'",
                         id.token()
                     )))
                 },
-                |entry| entry.service.collect_erased(),
+                |entry| entry.service.collect(),
             )
         });
     }
@@ -153,7 +93,7 @@ fn collect_services(
 ///
 fn render_services(
     active_slots: &[ServiceSlot],
-    registry: &HashMap<ServiceSlot, ServiceEntry>,
+    registry: &ServiceRegistry,
     collected: &HashMap<ServiceSlot, CollectResult>,
     colors: &Colors,
 ) {
@@ -175,7 +115,7 @@ fn render_services(
         match result {
             Err(e) => render_service_error(id, e, colors),
             Ok(data) => {
-                let Some(entry) = registry.get(&id) else {
+                let Some(entry) = registry.get(id) else {
                     render_service_error(
                         id,
                         &AppError::DataUnavailable("no registry entry".into()),
@@ -185,10 +125,7 @@ fn render_services(
                 };
 
                 // Render the service
-                if let Err(e) = entry
-                    .service
-                    .render_erased(id.label(), data.as_ref(), colors)
-                {
+                if let Err(e) = entry.service.render(id.label(), data, colors) {
                     render_service_error(id, &e, colors);
                 }
             }
@@ -220,7 +157,8 @@ fn main() {
     );
     let _ = io::stdout().flush();
 
-    let registry = build_registry(&opts);
+    let ctx = ServiceContext::from(&opts);
+    let registry = ServiceRegistry::new(&ctx);
     let collected = collect_services(&active_slots, &registry);
 
     if opts.clear {

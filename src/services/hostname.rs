@@ -16,8 +16,7 @@ impl Service for HostnameService {
     /// `collect()` reads the hostname from `/proc/sys/kernel/hostname`
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let hostname =
-            read_first_line("/proc/sys/kernel/hostname").unwrap_or_else(|| "unknown".into());
+        let hostname = read_first_line("/proc/sys/kernel/hostname")?;
         Ok(HostnameInfo { hostname })
     }
 

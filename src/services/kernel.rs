@@ -16,8 +16,7 @@ impl Service for KernelService {
     /// `collect()` reads the kernel version from `/proc/sys/kernel/osrelease`
     //
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let version =
-            read_first_line("/proc/sys/kernel/osrelease").unwrap_or_else(|| "unknown".into());
+        let version = read_first_line("/proc/sys/kernel/osrelease")?;
         Ok(KernelInfo { version })
     }
 

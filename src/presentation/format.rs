@@ -54,7 +54,13 @@ pub fn format_uptime(seconds: u64) -> String {
 ///
 #[must_use]
 pub fn format_size(kb: u64) -> String {
-    const UNITS: &[(f64, &str)] = &[(KB_PER_TB, "T"), (KB_PER_GB, "G"), (KB_PER_MB, "M")];
+    // Casting integer size constants to f64 for fractional division (precision loss is possible)
+    #[allow(clippy::cast_precision_loss)]
+    const UNITS: &[(f64, &str)] = &[
+        (KB_PER_TB as f64, "T"),
+        (KB_PER_GB as f64, "G"),
+        (KB_PER_MB as f64, "M"),
+    ];
 
     #[allow(clippy::cast_precision_loss)]
     let k = kb as f64;

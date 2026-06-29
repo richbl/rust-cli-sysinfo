@@ -78,6 +78,23 @@ pub enum AnyService {
     Users(UsersService),
 }
 
+/// `dispatch_render!` dispatches rendering to the underlying concrete service
+macro_rules! dispatch_render {
+    ($self:expr, $data:expr, $label:expr, $colors:expr, { $($variant:ident => $data_variant:path),* $(,)? }) => {
+        match ($self, $data) {
+            $(
+                (Self::$variant(s), $data_variant(d)) => {
+                    s.render($label, d, $colors);
+                    Ok(())
+                }
+            )*
+            _ => Err(AppError::DataUnavailable(
+                "Service and Data type mismatch".into(),
+            )),
+        }
+    };
+}
+
 impl AnyService {
     /// `collect()` dispatches to the underlying concrete service and maps the result into the
     /// corresponding `ServiceData` variant
@@ -101,54 +118,18 @@ impl AnyService {
     /// `render()` hands off rendering to the underlying concrete service
     ///
     pub fn render(&self, label: &str, data: &ServiceData, colors: &Colors) -> Result<(), AppError> {
-        match (self, data) {
-            (Self::Os(s), ServiceData::Os(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Hostname(s), ServiceData::Hostname(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::CpuModel(s), ServiceData::CpuModel(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Gpu(s), ServiceData::Gpu(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Kernel(s), ServiceData::Kernel(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Uptime(s), ServiceData::Uptime(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::LoadAvg(s), ServiceData::LoadAvg(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::CpuUsage(s), ServiceData::CpuUsage(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Memory(s), ServiceData::Memory(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Disk(s), ServiceData::Disk(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            (Self::Users(s), ServiceData::Users(d)) => {
-                s.render(label, d, colors);
-                Ok(())
-            }
-            _ => Err(AppError::DataUnavailable(
-                "Service and Data type mismatch".into(),
-            )),
-        }
+        dispatch_render!(self, data, label, colors, {
+            Os => ServiceData::Os,
+            Hostname => ServiceData::Hostname,
+            CpuModel => ServiceData::CpuModel,
+            Gpu => ServiceData::Gpu,
+            Kernel => ServiceData::Kernel,
+            Uptime => ServiceData::Uptime,
+            LoadAvg => ServiceData::LoadAvg,
+            CpuUsage => ServiceData::CpuUsage,
+            Memory => ServiceData::Memory,
+            Disk => ServiceData::Disk,
+            Users => ServiceData::Users,
+        })
     }
 }

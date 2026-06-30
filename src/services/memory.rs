@@ -6,75 +6,90 @@ use crate::constants::{MEM_CRIT_PCT, MEM_WARN_PCT};
 
 /// `MemInfo` contains memory usage metrics parsed from `/proc/meminfo`
 pub struct MemInfo {
-    pub total_kb: u64,
-    pub used_kb: u64,
+    pub total: u64,
+    pub used: u64,
     pub pct: f64,
 }
 
 /// `MemoryService` is a struct for collecting and rendering memory usage
 pub struct MemoryService;
 
+/// `parse_kb()` parses a kilobyte value from a `/proc/meminfo` line (e.g. `"MemTotal: 8192 kB"`)
+///
+fn parse_kb(line: &str) -> u64 {
+    line.split_whitespace()
+        .nth(1)
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
+}
+
+/// Raw field values parsed directly from `/proc/meminfo` before validation or fallback logic
+struct RawMemInfo {
+    total: Option<u64>,
+    available: Option<u64>,
+    free: Option<u64>,
+}
+
+/// `read_meminfo()` reads `MemTotal`, `MemAvailable`, and `MemFree` from `/proc/meminfo`
+/// returning each as `Option<u64>` so the caller can apply fallback logic
+///
+fn read_meminfo() -> Result<RawMemInfo, AppError> {
+    let mut raw = RawMemInfo {
+        total: None,
+        available: None,
+        free: None,
+    };
+
+    let file = fs::File::open("/proc/meminfo")?;
+
+    for line in io::BufReader::new(file).lines().map_while(Result::ok) {
+        if line.starts_with("MemTotal:") {
+            raw.total = Some(parse_kb(&line));
+        } else if line.starts_with("MemAvailable:") {
+            raw.available = Some(parse_kb(&line));
+        } else if line.starts_with("MemFree:") {
+            raw.free = Some(parse_kb(&line));
+        }
+
+        if raw.total.is_some() && raw.available.is_some() && raw.free.is_some() {
+            break;
+        }
+    }
+
+    Ok(raw)
+}
+
 /// `MemoryService` implements the `Service` trait
 impl Service for MemoryService {
     type Data = MemInfo;
 
-    /// `collect()` reads `MemTotal`, `MemAvailable`, and `MemFree` from `/proc/meminfo` and
-    /// computes usage
+    /// `collect()` delegates file parsing to `read_meminfo()` then resolves
+    /// optional fields and computes usage
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let mut total_kb = None;
-        let mut available_kb = None;
-        let mut free_kb = None;
+        let raw = read_meminfo()?;
 
-        let parse_kb = |line: &str| -> u64 {
-            line.split_whitespace()
-                .nth(1)
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(0)
-        };
-
-        let file = fs::File::open("/proc/meminfo")?;
-
-        for line in io::BufReader::new(file).lines().map_while(Result::ok) {
-            if line.starts_with("MemTotal:") {
-                total_kb = Some(parse_kb(&line));
-            } else if line.starts_with("MemAvailable:") {
-                available_kb = Some(parse_kb(&line));
-            } else if line.starts_with("MemFree:") {
-                free_kb = Some(parse_kb(&line));
-            }
-
-            // Break early only if all fields have been successfully located
-            if total_kb.is_some() && available_kb.is_some() && free_kb.is_some() {
-                break;
-            }
-        }
-
-        let total_kb = total_kb.ok_or_else(|| {
+        let total = raw.total.ok_or_else(|| {
             AppError::DataUnavailable("MemTotal not found in /proc/meminfo".into())
         })?;
 
         // Fall back to MemFree when MemAvailable is absent (kernels < 3.14)
-        let avail_kb = available_kb.unwrap_or(free_kb.ok_or_else(|| {
+        let avail_kb = raw.available.unwrap_or(raw.free.ok_or_else(|| {
             AppError::DataUnavailable(
                 "Neither MemAvailable nor MemFree found in /proc/meminfo".into(),
             )
         })?);
 
-        let used_kb = total_kb.saturating_sub(avail_kb);
+        let used = total.saturating_sub(avail_kb);
 
         #[allow(clippy::cast_precision_loss)]
-        let pct = if total_kb > 0 {
-            (used_kb as f64 / total_kb as f64) * 100.0
+        let pct = if total > 0 {
+            (used as f64 / total as f64) * 100.0
         } else {
             0.0
         };
 
-        Ok(MemInfo {
-            total_kb,
-            used_kb,
-            pct,
-        })
+        Ok(MemInfo { total, used, pct })
     }
 
     /// `render()` renders memory usage as a percentage with used/total in MB and threshold-based
@@ -84,8 +99,8 @@ impl Service for MemoryService {
         let mem_str = format!(
             "{:.1}% ({}M/{}M)",
             mem.pct,
-            mem.used_kb / 1024,
-            mem.total_kb / 1024
+            mem.used / 1024,
+            mem.total / 1024
         );
 
         print_row(

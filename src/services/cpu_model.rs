@@ -1,7 +1,5 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
 use super::prelude::*;
+use crate::core::utils::find_key_value;
 
 /// `CpuModelInfo` parsed from `/proc/cpuinfo`
 #[derive(Default)]
@@ -19,39 +17,21 @@ impl Service for CpuModelService {
     /// `collect()` reads the first `model name` entry from `/proc/cpuinfo`
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        Ok(CpuModelInfo {
-            model: read_cpu_model(),
-        })
+        let model = find_key_value("/proc/cpuinfo", "model name", ':')?;
+        Ok(CpuModelInfo { model })
     }
 
     /// `render()` renders the CPU model name
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
         print_row(
             label,
             data.model.as_deref().unwrap_or("Unknown"),
             &Threshold::None,
             c,
         );
+        Ok(())
     }
-}
-
-/// `read_cpu_model()` reads the CPU model name from the first `model name` entry in
-/// `/proc/cpuinfo`, returning on first match for efficiency
-///
-fn read_cpu_model() -> Option<String> {
-    let file = File::open("/proc/cpuinfo").ok()?;
-
-    for line in BufReader::new(file).lines().map_while(Result::ok) {
-        // Note: `let`-chains require Rust edition 2024
-        if line.starts_with("model name")
-            && let Some((_, val)) = line.split_once(':')
-        {
-            return Some(val.trim().to_string());
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]
@@ -87,6 +67,8 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = CpuModelService.collect().unwrap();
-        CpuModelService.render("  CPU:", &data, &Colors::new(false));
+        CpuModelService
+            .render("  CPU:", &data, &Colors::new(false))
+            .unwrap();
     }
 }

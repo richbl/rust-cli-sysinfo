@@ -1,41 +1,25 @@
-use std::fmt;
 use std::io;
+use thiserror::Error;
 
 /// `AppError` is the application-level error type returned by all service `collect()` calls
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum AppError {
-    Io(io::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Data unavailable: {0}")]
     DataUnavailable(String),
 }
 
-/// `AppError` implements the standard `Display` trait
-impl fmt::Display for AppError {
-    /// `fmt()` formats `AppError` variants for end-user display
+impl From<utwt::ParseError> for AppError {
+    /// `from()` converts `utwt::ParseError` into `AppError` to facilitate error handling
     ///
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Io(e) => write!(f, "IO error: {e}"),
-            Self::DataUnavailable(s) => write!(f, "Data unavailable: {s}"),
+    fn from(e: utwt::ParseError) -> Self {
+        match e {
+            utwt::ParseError::Io(io_err) => Self::Io(io_err),
+            utwt::ParseError::Utmp(utmp_err) => Self::DataUnavailable(utmp_err.to_string()),
+            _ => Self::DataUnavailable("unknown utmp parse error".into()),
         }
-    }
-}
-
-/// `AppError` implements the standard `Error` trait
-impl std::error::Error for AppError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Io(e) => Some(e),
-            Self::DataUnavailable(_) => None,
-        }
-    }
-}
-
-/// `AppError` implements a conversion from `io::Error` to `AppError`
-impl From<io::Error> for AppError {
-    /// `from()` converts an `io::Error` into an `AppError::Io`
-    ///
-    fn from(error: io::Error) -> Self {
-        Self::Io(error)
     }
 }
 

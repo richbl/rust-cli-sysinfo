@@ -8,16 +8,7 @@ pub enum SlotFilter {
     Custom(Vec<ServiceSlot>),
 }
 
-/// `SlotMeta` bundles a slot's `-s` token, display label, and its human-readable description
-///
-struct SlotMeta {
-    slot: ServiceSlot,
-    token: &'static str,
-    label: &'static str,
-    description: &'static str,
-}
-
-/// `define_slots!` generates the `SLOT_TABLE` and `ServiceSlot` enum
+/// `define_slots!` generates the `ServiceSlot` enum and its property accessors
 macro_rules! define_slots {
     ($($variant:ident: $token:literal, $label:literal, $description:literal);* $(;)?) => {
 
@@ -27,24 +18,59 @@ macro_rules! define_slots {
             $($variant),*
         }
 
-        /// The ordered table of all known slots
-        const SLOT_TABLE: &[SlotMeta] = &[
-            $(
-                SlotMeta {
-                    slot: ServiceSlot::$variant,
-                    token: $token,
-                    label: $label,
-                    description: $description,
-                },
-            )*
+        /// Static compilation of all available slots, keeping their default order
+        const ALL_SLOTS: &[ServiceSlot] = &[
+            $(ServiceSlot::$variant),*
         ];
+
+        impl ServiceSlot {
+            /// `token()` returns the token string for this slot
+            ///
+            #[must_use]
+            pub const fn token(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $token),*
+                }
+            }
+
+            /// `label()` returns the display label string for this slot
+            ///
+            #[must_use]
+            pub const fn label(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $label),*
+                }
+            }
+
+            /// `description()` returns a description shown in `-s` labeled output
+            ///
+            #[must_use]
+            pub const fn description(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $description),*
+                }
+            }
+
+            /// `all()` returns the default ordered list of all slots as a static slice, avoiding heap allocation
+            ///
+            #[must_use]
+            pub const fn all() -> &'static [Self] {
+                ALL_SLOTS
+            }
+
+            /// `from_token()` looks up a `ServiceSlot` by its token string (case-sensitive lookup)
+            ///
+            fn from_token(token: &str) -> Option<Self> {
+                match token {
+                    $($token => Some(Self::$variant),)*
+                    _ => None,
+                }
+            }
+        }
     }
 }
 
-// `define_slots!` macro generates the `SLOT_TABLE` and `ServiceSlot` enum
-//
-// This table is used to map the `-s` token strings to the `ServiceSlot` variants and provides
-// a human-readable description for each slot during normal rendering output
+// Generates the enum and safe properties at compile time
 define_slots! {
     Os:   "OS",   "  OS:",             "Operating system name and version";
     Hst:  "HST",  "  Hostname:",       "System hostname";
@@ -59,45 +85,7 @@ define_slots! {
     Usr:  "USR",  "  User(s):",         "Current users";
 }
 
-/// `ServiceSlot` methods
 impl ServiceSlot {
-    /// `meta()` looks up this slot's entry in `SLOT_TABLE`
-    ///
-    fn meta(self) -> &'static SlotMeta {
-        SLOT_TABLE
-            .iter()
-            .find(|m| m.slot == self)
-            .expect("every ServiceSlot variant must have a SLOT_TABLE entry")
-    }
-
-    /// `token()` returns the token string for this slot (used in `-s` output and parsing)
-    ///
-    #[must_use]
-    pub fn token(self) -> &'static str {
-        self.meta().token
-    }
-
-    /// `label()` returns the display label string for this slot
-    ///
-    #[must_use]
-    pub fn label(self) -> &'static str {
-        self.meta().label
-    }
-
-    /// `description()` returns a description shown next to the token in `-s` labeled output
-    ///
-    #[must_use]
-    pub fn description(self) -> &'static str {
-        self.meta().description
-    }
-
-    /// `all()` returns the default ordered list of all slots, defining the standard output layout
-    ///
-    #[must_use]
-    pub fn all() -> Vec<Self> {
-        SLOT_TABLE.iter().map(|m| m.slot).collect()
-    }
-
     /// `parse_list()` parses a hyphen-separated token string (e.g. `"HST-OS-KNL"`) into an
     /// ordered `Vec<ServiceSlot>`
     ///
@@ -115,12 +103,6 @@ impl ServiceSlot {
             })
             .collect()
     }
-
-    /// `from_token()` looks up a `ServiceSlot` by its token string (case-insensitive)
-    ///
-    fn from_token(token: &str) -> Option<Self> {
-        SLOT_TABLE.iter().find(|m| m.token == token).map(|m| m.slot)
-    }
 }
 
 impl SlotFilter {
@@ -128,7 +110,7 @@ impl SlotFilter {
     ///
     pub fn to_active_slots(&self) -> Option<Vec<ServiceSlot>> {
         match self {
-            Self::Default => Some(ServiceSlot::all()),
+            Self::Default => Some(ServiceSlot::all().to_vec()),
             Self::Custom(slots) => Some(slots.clone()),
             Self::ShowLabeled => None,
         }
@@ -171,7 +153,7 @@ mod tests {
     fn all_contains_no_duplicates() {
         let slots = ServiceSlot::all();
         let mut seen = std::collections::HashSet::new();
-        for slot in &slots {
+        for slot in slots {
             assert!(seen.insert(slot), "duplicate slot found: {slot:?}");
         }
     }
@@ -196,7 +178,6 @@ mod tests {
     ///
     #[test]
     fn token_cpuu_has_double_u() {
-        // Regression guard: "CPUU" is easy to mistype as "CPU" when adding new slots
         assert_eq!(ServiceSlot::CpuU.token(), "CPUU");
     }
 
@@ -204,7 +185,7 @@ mod tests {
     ///
     #[test]
     fn all_tokens_are_non_empty() {
-        for slot in ServiceSlot::all() {
+        for &slot in ServiceSlot::all() {
             assert!(!slot.token().is_empty(), "{slot:?} has an empty token");
         }
     }
@@ -213,7 +194,7 @@ mod tests {
     ///
     #[test]
     fn all_tokens_are_uppercase() {
-        for slot in ServiceSlot::all() {
+        for &slot in ServiceSlot::all() {
             let token = slot.token();
             assert_eq!(
                 token,
@@ -229,7 +210,7 @@ mod tests {
     ///
     #[test]
     fn all_descriptions_are_non_empty() {
-        for slot in ServiceSlot::all() {
+        for &slot in ServiceSlot::all() {
             assert!(
                 !slot.description().is_empty(),
                 "{slot:?} has an empty description"
@@ -243,7 +224,7 @@ mod tests {
     ///
     #[test]
     fn all_labels_are_non_empty() {
-        for slot in ServiceSlot::all() {
+        for &slot in ServiceSlot::all() {
             assert!(!slot.label().is_empty(), "{slot:?} has an empty label");
         }
     }
@@ -253,7 +234,7 @@ mod tests {
     ///
     #[test]
     fn all_labels_start_with_spaces_and_end_with_colon() {
-        for slot in ServiceSlot::all() {
+        for &slot in ServiceSlot::all() {
             let label = slot.label();
             assert!(
                 label.starts_with("  "),
@@ -314,8 +295,6 @@ mod tests {
     ///
     #[test]
     fn parse_list_all_tokens_round_trips() {
-        // Build a hyphen-joined string from the canonical all() order and
-        // verify it round-trips back to the same vec
         let canonical = ServiceSlot::all();
         let joined: String = canonical
             .iter()
@@ -335,6 +314,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("INVALID"));
     }
+
     /// `parse_list_partially_invalid_fails_on_bad_token()` asserts that parsing a list containing
     /// an invalid token fails and references the bad token
     ///

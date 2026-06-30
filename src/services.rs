@@ -37,15 +37,15 @@ pub mod prelude {
 
 /// `Service` is the common interface implemented by every system information service
 pub trait Service {
-    type Data: Send + Sync;
+    type Data;
 
     /// `collect()` reads raw system data and returns it
     ///
     fn collect(&self) -> Result<Self::Data, AppError>;
 
-    /// `render()` formats and prints `data` to stdout using the provided label and colors
+    /// `render()` formats and prints `data` to stdout, propagating any formatting or output errors
     ///
-    fn render(&self, label: &str, data: &Self::Data, colors: &Colors);
+    fn render(&self, label: &str, data: &Self::Data, colors: &Colors) -> Result<(), AppError>;
 }
 
 /// `ServiceData` wraps the concrete `Data` struct for every known service
@@ -84,13 +84,16 @@ macro_rules! dispatch_render {
         match ($self, $data) {
             $(
                 (Self::$variant(s), $data_variant(d)) => {
-                    s.render($label, d, $colors);
-                    Ok(())
+                    // Directly propagate the Result<(), AppError> from the service's render call
+                    s.render($label, d, $colors)
                 }
             )*
-            _ => Err(AppError::DataUnavailable(
-                "Service and Data type mismatch".into(),
-            )),
+            _ => {
+                // Fail-fast on developer implementation bugs
+                panic!(
+                    "Error: Service and Data type mismatch",
+                );
+            }
         }
     };
 }

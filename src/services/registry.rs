@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::core::context::ServiceContext;
 use crate::core::error::AppError;
 use crate::services::AnyService;
@@ -20,49 +18,56 @@ use crate::slot::ServiceSlot;
 /// `CollectResult` is the statically typed result of a single service's `collect()` call
 pub type CollectResult = Result<ServiceData, AppError>;
 
-/// `ServiceEntry` pairs a [`ServiceSlot`] identifier with its concrete service
-/// implementation
-pub struct ServiceEntry {
-    pub service: AnyService,
-}
-
-/// `ServiceRegistry` acts as a factory and container for all known services.
+/// `ServiceRegistry` acts as a factory and container for all known services
 pub struct ServiceRegistry {
-    entries: HashMap<ServiceSlot, ServiceEntry>,
+    os: AnyService,
+    hst: AnyService,
+    cpu: AnyService,
+    gpu: AnyService,
+    knl: AnyService,
+    upt: AnyService,
+    load: AnyService,
+    cpu_u: AnyService,
+    ram_u: AnyService,
+    dsk_u: AnyService,
+    usr: AnyService,
 }
 
-/// `impl ServiceRegistry` creates a list of [`ServiceEntry`] instances
 impl ServiceRegistry {
-    /// `new()` constructs one [`ServiceEntry`] for every known service, wiring in configuration
-    /// from the [`ServiceContext`]
+    /// `new()` constructs one `AnyService` for every known service, wiring in configuration
+    /// from the `ServiceContext`
     ///
     pub fn new(ctx: &ServiceContext) -> Self {
-        let entries: HashMap<_, _> = [
-            (ServiceSlot::Os, AnyService::Os(OsService)),
-            (ServiceSlot::Hst, AnyService::Hostname(HostnameService)),
-            (ServiceSlot::Cpu, AnyService::CpuModel(CpuModelService)),
-            (ServiceSlot::Gpu, AnyService::Gpu(GpuService)),
-            (ServiceSlot::Knl, AnyService::Kernel(KernelService)),
-            (ServiceSlot::Upt, AnyService::Uptime(UptimeService)),
-            (ServiceSlot::Load, AnyService::LoadAvg(LoadAvgService)),
-            (
-                ServiceSlot::CpuU,
-                AnyService::CpuUsage(CpuUsageService::new(ctx)),
-            ),
-            (ServiceSlot::RamU, AnyService::Memory(MemoryService)),
-            (ServiceSlot::DskU, AnyService::Disk(DiskService::new(ctx))),
-            (ServiceSlot::Usr, AnyService::Users(UsersService)),
-        ]
-        .into_iter()
-        .map(|(slot, service)| (slot, ServiceEntry { service }))
-        .collect();
-
-        Self { entries }
+        Self {
+            os: AnyService::Os(OsService),
+            hst: AnyService::Hostname(HostnameService),
+            cpu: AnyService::CpuModel(CpuModelService),
+            gpu: AnyService::Gpu(GpuService),
+            knl: AnyService::Kernel(KernelService),
+            upt: AnyService::Uptime(UptimeService),
+            load: AnyService::LoadAvg(LoadAvgService),
+            cpu_u: AnyService::CpuUsage(CpuUsageService::new(ctx)),
+            ram_u: AnyService::Memory(MemoryService),
+            dsk_u: AnyService::Disk(DiskService::new(ctx)),
+            usr: AnyService::Users(UsersService),
+        }
     }
 
-    /// `get()` retrieves the registered service for a given slot
+    /// `get()` retrieves the registered service for a given slot using direct pattern matching
     ///
-    pub fn get(&self, slot: ServiceSlot) -> Option<&ServiceEntry> {
-        self.entries.get(&slot)
+    pub fn get(&self, slot: ServiceSlot) -> &AnyService {
+        match slot {
+            ServiceSlot::Os => &self.os,
+            ServiceSlot::Hst => &self.hst,
+            ServiceSlot::Cpu => &self.cpu,
+            ServiceSlot::Gpu => &self.gpu,
+            ServiceSlot::Knl => &self.knl,
+            ServiceSlot::Upt => &self.upt,
+            ServiceSlot::Load => &self.load,
+            ServiceSlot::CpuU => &self.cpu_u,
+            ServiceSlot::RamU => &self.ram_u,
+            ServiceSlot::DskU => &self.dsk_u,
+            ServiceSlot::Usr => &self.usr,
+        }
     }
 }

@@ -29,7 +29,7 @@ impl Service for GpuService {
 
     /// `render()` renders GPU model name(s) as a single row, newline-separated for multiple GPUs
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
         let separator = format!("\n{:width$}", "", width = label.len() + 1);
         let gpu_str = if data.models.is_empty() {
             "Unknown".to_string()
@@ -37,6 +37,7 @@ impl Service for GpuService {
             data.models.join(&separator)
         };
         print_row(label, &gpu_str, &Threshold::None, c);
+        Ok(())
     }
 }
 
@@ -46,7 +47,7 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
     let mut seen_paths: HashSet<PathBuf> = HashSet::new();
     let mut names = Vec::new();
 
-    let entries = fs::read_dir("/sys/class/drm").map_err(AppError::Io)?;
+    let entries = fs::read_dir("/sys/class/drm")?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -79,7 +80,6 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
 
 /// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device
 /// IDs
-/// Returns `Ok(None)` if the card does not expose valid PCI IDs (e.g. virtual cards)
 ///
 fn gpu_name_from_card(card_path: &Path) -> Result<Option<String>, AppError> {
     let device_path = card_path.join("device");

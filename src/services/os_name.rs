@@ -1,14 +1,12 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
 use super::prelude::*;
+use crate::core::utils::find_key_value;
 
 /// `OsInfo` contains the OS name parsed from `/etc/os-release`
 pub struct OsInfo {
     pub name: String,
 }
 
-/// `OsService` is a struct for collecting and rendering the OS name
+/// `OsService` is a service for collecting and rendering the OS name
 pub struct OsService;
 
 /// `OsService` implements the `Service` trait
@@ -18,29 +16,20 @@ impl Service for OsService {
     /// `collect()` reads `PRETTY_NAME` from `/etc/os-release`
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let name = read_os_name().unwrap_or_else(|| "Unknown Linux".into());
+        let name = find_key_value("/etc/os-release", "PRETTY_NAME", '=')?.map_or_else(
+            || "Unknown Linux".into(),
+            |val| val.trim_matches('"').to_string(),
+        );
+
         Ok(OsInfo { name })
     }
 
     /// `render()` renders the OS name
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
         print_row(label, &data.name, &Threshold::None, c);
+        Ok(())
     }
-}
-
-/// `read_os_name()` reads the `PRETTY_NAME` field from `/etc/os-release`
-///
-fn read_os_name() -> Option<String> {
-    let file = File::open("/etc/os-release").ok()?;
-
-    for line in BufReader::new(file).lines().map_while(Result::ok) {
-        if let Some(val) = line.strip_prefix("PRETTY_NAME=") {
-            return Some(val.trim_matches('"').to_string());
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]
@@ -64,6 +53,8 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = OsService.collect().unwrap();
-        OsService.render("  OS:", &data, &Colors::new(false));
+        OsService
+            .render("  OS:", &data, &Colors::new(false))
+            .unwrap();
     }
 }

@@ -8,7 +8,7 @@ mod presentation;
 mod services;
 mod slot;
 
-use std::collections::HashMap;
+// Replace occurrences of std::collections::HashMap with Vec
 use std::io::{self, Write};
 
 use crate::cli::Opts;
@@ -20,8 +20,7 @@ use crate::presentation::format::print_row_error;
 use crate::services::registry::{CollectResult, ServiceRegistry};
 use crate::slot::ServiceSlot;
 
-/// `render_service_error()` prints a standard error row for a slot whose data could
-/// not be collected or rendered
+/// `render_service_error` renders an error message for a single service
 ///
 fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
     let label = id.label();
@@ -29,7 +28,7 @@ fn render_service_error(id: ServiceSlot, error: &AppError, colors: &Colors) {
     print_row_error(label, &value, colors);
 }
 
-/// `render_labeled()` prints the token reference table (output of `-s` with no argument)
+/// `render_labeled()` displays a list of available service tokens
 ///
 fn render_labeled(c: &Colors) {
     let slots = ServiceSlot::all();
@@ -41,8 +40,7 @@ fn render_labeled(c: &Colors) {
     );
     println!("  Available service tokens:\n");
 
-    // Loop over all services, printing their tokens and descriptions
-    for slot in &slots {
+    for slot in slots {
         println!(
             "    {}{:<width$}{}  {}",
             c.cyan,
@@ -68,33 +66,26 @@ fn render_labeled(c: &Colors) {
 fn collect_services(
     active_slots: &[ServiceSlot],
     registry: &ServiceRegistry,
-) -> HashMap<ServiceSlot, CollectResult> {
-    let mut collected: HashMap<ServiceSlot, CollectResult> = HashMap::new();
+) -> Vec<(ServiceSlot, CollectResult)> {
+    let mut collected: Vec<(ServiceSlot, CollectResult)> = Vec::with_capacity(active_slots.len());
 
     for &id in active_slots {
-        collected.entry(id).or_insert_with(|| {
-            registry.get(id).map_or_else(
-                || {
-                    Err(AppError::DataUnavailable(format!(
-                        "no registry entry for slot '{}'",
-                        id.token()
-                    )))
-                },
-                |entry| entry.service.collect(),
-            )
-        });
+        // Avoid duplicate collections (e.g. CPU sampling delays) if the same slot is listed twice
+        if !collected.iter().any(|(slot, _)| *slot == id) {
+            let service = registry.get(id);
+            collected.push((id, service.collect()));
+        }
     }
 
     collected
 }
 
-/// `render_services()` iterates through the active slots and displays their collected
-/// data using the provided colors
+/// `render_services()` iterates through the active slots and displays their collected data
 ///
 fn render_services(
     active_slots: &[ServiceSlot],
     registry: &ServiceRegistry,
-    collected: &HashMap<ServiceSlot, CollectResult>,
+    collected: &[(ServiceSlot, CollectResult)],
     colors: &Colors,
 ) {
     println!(
@@ -102,8 +93,9 @@ fn render_services(
         colors.bold, colors.cyan, APP_NAME, SEP, colors.reset
     );
 
+    // Render each unique active slot
     for &id in active_slots {
-        let Some(result) = collected.get(&id) else {
+        let Some((_, result)) = collected.iter().find(|(slot, _)| *slot == id) else {
             render_service_error(
                 id,
                 &AppError::DataUnavailable("result not collected".into()),
@@ -115,17 +107,10 @@ fn render_services(
         match result {
             Err(e) => render_service_error(id, e, colors),
             Ok(data) => {
-                let Some(entry) = registry.get(id) else {
-                    render_service_error(
-                        id,
-                        &AppError::DataUnavailable("no registry entry".into()),
-                        colors,
-                    );
-                    continue;
-                };
+                let service = registry.get(id);
 
-                // Render the service
-                if let Err(e) = entry.service.render(id.label(), data, colors) {
+                // This only occurs if a real-time rendering failure occurs
+                if let Err(e) = service.render(id.label(), data, colors) {
                     render_service_error(id, &e, colors);
                 }
             }
@@ -135,13 +120,12 @@ fn render_services(
     println!("  {}{}{}", colors.cyan, SEP, colors.reset);
 }
 
-/// `main()` parses CLI options, collects system data, and renders to stdout
+/// `main()` is the entry point for the utility (like... duh!)
 ///
 fn main() {
     let opts = Opts::from_args();
     let colors = Colors::new(opts.color);
 
-    // -s with no argument: print the token reference table and exit
     let Some(active_slots) = opts.slot_filter.to_active_slots() else {
         render_labeled(&colors);
         return;

@@ -28,16 +28,26 @@ pub fn read_hex_u16(path: &Path) -> Result<u16, AppError> {
         .map_err(|_| AppError::DataUnavailable(format!("invalid hex u16 in {}", path.display())))
 }
 
-/// `c_char_array_to_string()` safely converts a fixed-size C character array (null-terminated)
-/// from a `libc` struct into a Rust `String`
+/// `find_key_value` searches a file line-by-line for a key starting with a prefix, splitting the
+/// line by the provided delimiter and returning the trimmed value
 ///
-pub fn c_char_array_to_string(c_array: &[libc::c_char]) -> String {
-    let bytes: Vec<u8> = c_array
-        .iter()
-        .take_while(|&&c| c != 0)
-        .map(|&c| c.cast_unsigned())
-        .collect();
-    String::from_utf8_lossy(&bytes).into_owned()
+pub fn find_key_value(
+    path: impl AsRef<std::path::Path>,
+    key_prefix: &str,
+    delimiter: char,
+) -> Result<Option<String>, AppError> {
+    let file = std::fs::File::open(path)?;
+
+    for line in std::io::BufReader::new(file).lines() {
+        let line = line?;
+        if line.starts_with(key_prefix)
+            && let Some((_, val)) = line.split_once(delimiter)
+        {
+            return Ok(Some(val.trim().to_string()));
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -46,8 +56,8 @@ mod tests {
     use std::io::Write as _;
     use tempfile::NamedTempFile;
 
-    /// `temp_file_with()` creates a named temporary file pre-filled with `content`, returning a
-    /// `NamedTempFile` that deletes itself on drop (RAII)
+    /// `temp_file_with()` helper creates a named temporary file pre-filled with `content`,
+    /// returning a `NamedTempFile` that deletes itself on drop (RAII)
     ///
     fn temp_file_with(content: &str) -> NamedTempFile {
         let mut f = NamedTempFile::new().expect("create temp file");
@@ -198,32 +208,5 @@ mod tests {
     fn read_hex_u16_trims_surrounding_whitespace() {
         let f = temp_file_with("  0x10DE  \n");
         assert_eq!(read_hex_u16(f.path()).unwrap(), 0x10DE_u16);
-    }
-
-    /// `c_char_array_to_string_extracts_null_terminated_string()` asserts that it extracts up to
-    /// the null terminator
-    ///
-    #[test]
-    fn c_char_array_to_string_extracts_null_terminated_string() {
-        let arr: [libc::c_char; 8] = [116, 101, 115, 116, 0, 0, 0, 0]; // "test\0\0\0\0"
-        assert_eq!(c_char_array_to_string(&arr), "test");
-    }
-
-    /// `c_char_array_to_string_handles_full_array_no_null()` asserts that it handles an array with
-    /// no null terminator
-    ///
-    #[test]
-    fn c_char_array_to_string_handles_full_array_no_null() {
-        let arr: [libc::c_char; 4] = [102, 111, 111, 0]; // "foo\0"
-        assert_eq!(c_char_array_to_string(&arr), "foo");
-    }
-
-    /// `c_char_array_to_string_empty_array_returns_empty_string()` asserts that an array starting
-    /// with null returns empty
-    ///
-    #[test]
-    fn c_char_array_to_string_empty_array_returns_empty_string() {
-        let arr: [libc::c_char; 4] = [0, 0, 0, 0];
-        assert_eq!(c_char_array_to_string(&arr), "");
     }
 }

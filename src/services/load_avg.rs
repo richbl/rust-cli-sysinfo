@@ -39,11 +39,12 @@ impl Service for LoadAvgService {
 
     /// `render()` renders load averages as a single row
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
         let (l1, l5, l15) = data.loadavg;
         let load_str = format!("{l1:.2}, {l5:.2}, {l15:.2} (1m, 5m, 15m)");
 
         print_row(label, &load_str, &Threshold::None, c);
+        Ok(())
     }
 }
 
@@ -84,6 +85,8 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = LoadAvgService.collect().unwrap();
-        LoadAvgService.render("  Load Averages:", &data, &Colors::new(false));
+        LoadAvgService
+            .render("  Load Averages:", &data, &Colors::new(false))
+            .unwrap();
     }
 }

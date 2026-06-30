@@ -8,6 +8,8 @@
   pci-ids = "0.2.6"
   libc = "0.2"
   rustix = { version = "1", features = ["fs"] }
+  thiserror = "2"                               # error handling
+  utwt = "0.4"                                  # parse active users
 
 [dev-dependencies]
   tempfile = "3"

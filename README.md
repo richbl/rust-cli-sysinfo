@@ -129,8 +129,14 @@ Simply copy the `rust-cli-sysinfo` binary from the latest release to your system
 
 I've added a call to `rust-cli-sysinfo` in my `.bashrc` file, so it runs every time I open a new terminal window.
 
-> This is precisely the use case that I had in mind when I created this project. It's a quick way to get an overview of the status of various system services without having to run various CLI commands or run separate system utilities.
+> This is the use case that I had in mind when I created this project. It's a quick way to get an overview of the status of various system services without having to run various commands or run separate system utilities.
 
 ## Roadmap
 
-In general, this is a pretty simple executable doing some pretty basic stuff. But if you have any thoughts or ideas for improvements, send them my way.
+In general, this is a pretty straightforward executable doing some pretty basic stuff, but if you have any thoughts or ideas for improvements, please let me know.
+
+That said, here are some items planned for future **Rust-CLI-Sysinfo** releases:
+
+- [ ] Make the addition of new services easier to implement
+- [ ] Add support for non-Linux systems (e.g., macOS, Windows)
+- [ ] Add new services (of course)...

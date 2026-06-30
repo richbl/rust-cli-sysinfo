@@ -5,6 +5,10 @@ pub const APP_NAME: &str = "Rust-CLI-SysInfo";
 pub const SEP: &str =
     "────────────────────────────────────────────────────────────────────────────────";
 
+/// Label width for left-aligned labels
+///
+pub const LABEL_WIDTH: usize = 16;
+
 /// Application version, sourced from Cargo package version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

@@ -17,6 +17,8 @@ pub struct CpuUsageService {
 
 /// `CpuUsageService` constructor is used for creating a new `CpuUsageService`
 impl CpuUsageService {
+    /// `new()` creates a new `CpuUsageService`
+    ///
     pub fn new(ctx: &crate::core::context::ServiceContext) -> Self {
         Self {
             sample_ms: ctx.cpu_sample_ms,
@@ -43,7 +45,7 @@ impl Service for CpuUsageService {
 
     /// `render()` renders CPU utilization with threshold-based color coding
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
         let cpu_str = format!("{:.1}%", data.usage_pct);
         let cpu_thresh = Threshold::Check {
             value: data.usage_pct,
@@ -52,23 +54,30 @@ impl Service for CpuUsageService {
         };
 
         print_row(label, &cpu_str, &cpu_thresh, c);
+        Ok(())
     }
 }
 
-/// `read_cpu_snap()` reads a single CPU jiffies snapshot from the first line of `/proc/stat`
+/// `read_cpu_snap()` reads a single snapshot of aggregate CPU jiffies from `/proc/stat`
 ///
 fn read_cpu_snap() -> Result<CpuSnap, AppError> {
     let line = read_first_line("/proc/stat")?;
-    let fields: Vec<u64> = line
-        .split_whitespace()
-        .skip(1)
-        .filter_map(|v| v.parse().ok())
-        .collect();
 
-    let f = |i: usize| fields.get(i).copied().unwrap_or(0);
+    // Allocate an array on the stack for the first 8 CPU metrics
+    let mut fields = [0u64; 8];
 
-    let (user, nice, system, idle, iowait, irq, softirq, steal) =
-        (f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7));
+    for (i, val) in line.split_whitespace().skip(1).take(8).enumerate() {
+        fields[i] = val.parse::<u64>().unwrap_or(0);
+    }
+
+    let user = fields[0];
+    let nice = fields[1];
+    let system = fields[2];
+    let idle = fields[3];
+    let iowait = fields[4];
+    let irq = fields[5];
+    let softirq = fields[6];
+    let steal = fields[7];
 
     Ok(CpuSnap {
         total: user + nice + system + idle + iowait + irq + softirq + steal,

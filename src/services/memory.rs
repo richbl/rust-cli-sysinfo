@@ -33,7 +33,7 @@ impl Service for MemoryService {
                 .unwrap_or(0)
         };
 
-        let file = fs::File::open("/proc/meminfo").map_err(AppError::Io)?;
+        let file = fs::File::open("/proc/meminfo")?;
 
         for line in io::BufReader::new(file).lines().map_while(Result::ok) {
             if line.starts_with("MemTotal:") {
@@ -80,7 +80,7 @@ impl Service for MemoryService {
     /// `render()` renders memory usage as a percentage with used/total in MB and threshold-based
     /// color coding
     ///
-    fn render(&self, label: &str, mem: &Self::Data, c: &Colors) {
+    fn render(&self, label: &str, mem: &Self::Data, c: &Colors) -> Result<(), AppError> {
         let mem_str = format!(
             "{:.1}% ({}M/{}M)",
             mem.pct,
@@ -98,5 +98,6 @@ impl Service for MemoryService {
             },
             c,
         );
+        Ok(())
     }
 }

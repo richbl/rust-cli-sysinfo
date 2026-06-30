@@ -1,6 +1,6 @@
 use super::colors::Colors;
 use crate::constants::{
-    KB_PER_GB, KB_PER_MB, KB_PER_TB, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN,
+    KB_PER_GB, KB_PER_MB, KB_PER_TB, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN,
 };
 
 /// `Threshold` controls value-based color thresholds for utility rows
@@ -28,13 +28,13 @@ pub fn color_for_threshold(threshold: &Threshold, c: &Colors) -> &'static str {
 ///
 pub fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
     let color = color_for_threshold(threshold, c);
-    println!("{label:<16} {color}{value}{}", c.reset);
+    println!("{label:<LABEL_WIDTH$} {color}{value}{}", c.reset);
 }
 
 /// `print_row_error()` prints a left-aligned label/value row, coloring the value in red
 ///
 pub fn print_row_error(label: &str, value: &str, c: &Colors) {
-    println!("{label:<16} {}{value}{}", c.red, c.reset);
+    println!("{label:<LABEL_WIDTH$} {}{value}{}", c.red, c.reset);
 }
 
 /// `format_uptime()` formats a duration in seconds as `DDDd:HHh:MMm:SSs`
@@ -54,7 +54,7 @@ pub fn format_uptime(seconds: u64) -> String {
 ///
 #[must_use]
 pub fn format_size(kb: u64) -> String {
-    // Casting integer size constants to f64 for fractional division (precision loss is possible)
+    // Casting integer size constants to f64 for fractional division (precision loss possible)
     #[allow(clippy::cast_precision_loss)]
     const UNITS: &[(f64, &str)] = &[
         (KB_PER_TB as f64, "T"),
@@ -81,6 +81,7 @@ mod tests {
 
     /// `threshold_none_is_constructible()` asserts that the `Threshold::None` variant is
     /// constructible
+    ///
     #[test]
     fn threshold_none_is_constructible() {
         assert!(matches!(Threshold::None, Threshold::None));
@@ -88,6 +89,7 @@ mod tests {
 
     /// `threshold_check_stores_all_fields()` asserts that `Threshold::Check` correctly stores its
     /// parameters
+    ///
     #[test]
     fn threshold_check_stores_all_fields() -> Result<(), String> {
         let t = Threshold::Check {
@@ -108,6 +110,7 @@ mod tests {
     }
 
     /// `color_for_threshold_none_returns_reset()` asserts that `None` returns the reset color
+    ///
     #[test]
     fn color_for_threshold_none_returns_reset() {
         let c = Colors::new(true);
@@ -115,6 +118,7 @@ mod tests {
     }
 
     /// `color_for_threshold_below_warn_returns_green()` asserts that a value < warn returns green
+    ///
     #[test]
     fn color_for_threshold_below_warn_returns_green() {
         let c = Colors::new(true);
@@ -127,6 +131,7 @@ mod tests {
     }
 
     /// `color_for_threshold_above_warn_returns_yellow()` asserts that a value >= warn returns yellow
+    ///
     #[test]
     fn color_for_threshold_above_warn_returns_yellow() {
         let c = Colors::new(true);
@@ -139,6 +144,7 @@ mod tests {
     }
 
     /// `color_for_threshold_above_crit_returns_red()` asserts that a value >= crit returns red
+    ///
     #[test]
     fn color_for_threshold_above_crit_returns_red() {
         let c = Colors::new(true);

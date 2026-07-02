@@ -13,7 +13,7 @@
 
 ### The Default RCS Output
 
-The default output of the `rust-cli-sysinfo` utility is shown below. Notice that several of the services are (optionally) displayed in green to indicate their status:
+The default output of the `rust-cli-sysinfo` utility is shown below. Notice that several of the services are (optionally) colored to indicate their status:
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -60,6 +60,18 @@ The command used to generate this output is `rust-cli-sysinfo -s USR-OS-RAMU-DSK
 </p>
 <!-- markdownlint-enable MD033 -->
 
+## Creating New Service Tokens
+
+Don't see a service that's currently available in **Rust-CLI-Sysinfo**? No problem! You can now create your own custom service tokens.
+
+To do so:
+
+1. Create a new Rust file in the `src/services` directory of the project. You can use one of the existing service files as a template, or take a look at the well-documented `template.rs` file for a simple example of a new service.
+
+1. Compile the project and run `rust-cli-sysinfo`. Your new service will be rendered by default.
+
+That's it! One file: one service.
+
 ## RCS Features
 
 - Displays the status of various system services, including:
@@ -74,6 +86,12 @@ The command used to generate this output is `rust-cli-sysinfo -s USR-OS-RAMU-DSK
     - Memory usage
     - Disk usage (defaults to `/home`, but can be configured with the `-d/--disk` flag)
     - Users currently logged into the system
+
+- Create your own custom services to display additional system information, such as:
+    - Network interface details (e.g., IP address, MAC address, etc.)
+    - Battery status
+    - Temperature sensor(s)
+    - ...
 
 - Configurable service tokens, allowing users to choose which services to display, and the order in which they should be displayed
 
@@ -137,6 +155,6 @@ In general, this is a pretty straightforward executable doing some pretty basic 
 
 That said, here are some items planned for future **Rust-CLI-Sysinfo** releases:
 
-- [ ] Make the addition of new services easier to implement
+- [X] Make the addition of new services easier to implement
 - [ ] Add support for non-Linux systems (e.g., macOS, Windows)
 - [ ] Add new services (of course)...

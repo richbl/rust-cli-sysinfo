@@ -48,6 +48,21 @@ impl Service for LoadAvgService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "LOAD",
+            label: "Load averages",
+            description: "Load averages (1m, 5m, 15m)",
+            sort_order: 6,
+        },
+        Box::new(LoadAvgService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -86,7 +101,7 @@ mod tests {
     fn render_does_not_panic() {
         let data = LoadAvgService.collect().unwrap();
         LoadAvgService
-            .render("  Load Averages:", &data, &Colors::new(false))
+            .render("Load Averages", &data, &Colors::new(false))
             .unwrap();
     }
 }

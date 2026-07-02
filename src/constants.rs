@@ -1,13 +1,18 @@
 /// Application name displayed in the header
 pub const APP_NAME: &str = "Rust-CLI-SysInfo";
 
+/// Indentation prefix applied to every output row and header line
+///
+/// Change this single value to adjust the left-margin of all utility output.
+pub const INDENT: &str = "  ";
+
 /// Horizontal separator line used for visual sectioning
 pub const SEP: &str =
-    "────────────────────────────────────────────────────────────────────────────────";
+    "───────────────────────────────────────────────────────────────────────────────────";
 
 /// Label width for left-aligned labels
 ///
-pub const LABEL_WIDTH: usize = 16;
+pub const LABEL_WIDTH: usize = 14;
 
 /// Application version, sourced from Cargo package version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

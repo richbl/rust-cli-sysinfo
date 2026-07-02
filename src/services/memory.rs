@@ -116,3 +116,18 @@ impl Service for MemoryService {
         Ok(())
     }
 }
+
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "RAMU",
+            label: "Memory usage",
+            description: "Memory usage % (Used/Total)",
+            sort_order: 8,
+        },
+        Box::new(MemoryService),
+    )
+}

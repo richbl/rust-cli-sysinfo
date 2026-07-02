@@ -32,6 +32,21 @@ impl Service for OsService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "OS",
+            label: "OS",
+            description: "Operating system name and version",
+            sort_order: 0,
+        },
+        Box::new(OsService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -48,13 +63,11 @@ mod tests {
         assert!(!result.unwrap().name.is_empty());
     }
 
-    /// `render_does_not_panic()` asserts that rendering OS name does not panic
+    /// `render_does_not_panic()` asserts that rendering OS name will not panic
     ///
     #[test]
     fn render_does_not_panic() {
         let data = OsService.collect().unwrap();
-        OsService
-            .render("  OS:", &data, &Colors::new(false))
-            .unwrap();
+        OsService.render("OS", &data, &Colors::new(false)).unwrap();
     }
 }

@@ -60,17 +60,19 @@ The command used to generate this output is `rust-cli-sysinfo -s USR-OS-RAMU-DSK
 </p>
 <!-- markdownlint-enable MD033 -->
 
-## Creating New Service Tokens
+## Creating New RCS Services
 
-Don't see a service that's currently available in **Rust-CLI-Sysinfo**? No problem! You can now create your own custom service tokens.
+Don't see a service that's currently available in **Rust-CLI-Sysinfo**? No problem!
 
-To do so:
+You can create your own custom services following a "zero touch" approach, where each service is implemented *in a single Rust file*, and that service is then automatically rendered by the utility when compiled.
 
-1. Create a new Rust file in the `src/services` directory of the project. You can use one of the existing service files as a template, or take a look at the well-documented `template.rs` file for a simple example of a new service.
+To create a new RCS service:
 
-1. Compile the project and run `rust-cli-sysinfo`. Your new service will be rendered by default.
+1. Create a new Rust file in the `src/services` directory of the project. Use one of the existing service files as a working example, or take a look at the well-documented `template.rs` file for a simple example of a RCS service
 
-That's it! One file: one service.
+1. Compile the project and run `rust-cli-sysinfo`. Your new service will be rendered by default. That's it!
+
+**One file: one service. Done.**
 
 ## RCS Features
 
@@ -91,7 +93,7 @@ That's it! One file: one service.
     - Network interface details (e.g., IP address, MAC address, etc.)
     - Battery status
     - Temperature sensor(s)
-    - ...
+    - What else?
 
 - Configurable service tokens, allowing users to choose which services to display, and the order in which they should be displayed
 
@@ -119,7 +121,7 @@ That's it! One file: one service.
 
 - **Rust-CLI-Sysinfo** is designed to run natively on Linux systems, with no other requirements
 
-However, if you prefer to build **Rust-CLI-Sysinfo* from project sources, you'll need to have Rust installed on your system.
+However, if you prefer to build **Rust-CLI-Sysinfo** from project sources, you'll need to have Rust installed on your system.
 
 ## Installation
 

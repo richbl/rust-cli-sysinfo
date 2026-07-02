@@ -19,7 +19,7 @@ pub struct CpuUsageService {
 impl CpuUsageService {
     /// `new()` creates a new `CpuUsageService`
     ///
-    pub fn new(ctx: &crate::core::context::ServiceContext) -> Self {
+    pub fn new(ctx: &ServiceContext) -> Self {
         Self {
             sample_ms: ctx.cpu_sample_ms,
         }
@@ -107,4 +107,19 @@ fn sample_cpu_usage(sample_ms: u64) -> Result<f64, AppError> {
     let pct = (d_used as f64 / d_total as f64) * 100.0;
 
     Ok(pct)
+}
+
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "CPUU",
+            label: "CPU usage",
+            description: "CPU usage %",
+            sort_order: 7,
+        },
+        Box::new(CpuUsageService::new(ctx)),
+    )
 }

@@ -37,6 +37,21 @@ impl Service for UptimeService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "UPT",
+            label: "Uptime",
+            description: "System uptime",
+            sort_order: 5,
+        },
+        Box::new(UptimeService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -74,7 +89,7 @@ mod tests {
     fn render_does_not_panic() {
         let data = UptimeService.collect().unwrap();
         UptimeService
-            .render("  Uptime:", &data, &Colors::new(false))
+            .render("Uptime", &data, &Colors::new(false))
             .unwrap();
     }
 }

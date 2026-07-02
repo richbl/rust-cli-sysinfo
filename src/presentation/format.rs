@@ -1,6 +1,6 @@
 use super::colors::Colors;
 use crate::constants::{
-    KB_PER_GB, KB_PER_MB, KB_PER_TB, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN,
+    INDENT, KB_PER_GB, KB_PER_MB, KB_PER_TB, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN,
 };
 
 /// `Threshold` controls value-based color thresholds for utility rows
@@ -28,15 +28,23 @@ pub fn color_for_threshold(threshold: &Threshold, c: &Colors) -> &'static str {
 ///
 pub fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
     let color = color_for_threshold(threshold, c);
-    println!("{label:<LABEL_WIDTH$} {color}{value}{}", c.reset);
+    println!(
+        "{INDENT}{:<LABEL_WIDTH$} {color}{value}{}",
+        format!("{label}:"),
+        c.reset
+    );
 }
 
 /// `print_row_error()` prints a left-aligned label/value row, coloring the value in red
 ///
 pub fn print_row_error(label: &str, value: &str, c: &Colors) {
-    println!("{label:<LABEL_WIDTH$} {}{value}{}", c.red, c.reset);
+    println!(
+        "{INDENT}{:<LABEL_WIDTH$} {}{value}{}",
+        format!("{label}:"),
+        c.red,
+        c.reset
+    );
 }
-
 /// `format_uptime()` formats a duration in seconds as `DDDd:HHh:MMm:SSs`
 ///
 #[must_use]

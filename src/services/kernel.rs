@@ -28,6 +28,21 @@ impl Service for KernelService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "KNL",
+            label: "Kernel",
+            description: "Linux kernel version",
+            sort_order: 4,
+        },
+        Box::new(KernelService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -68,7 +83,7 @@ mod tests {
     fn render_does_not_panic() {
         let data = KernelService.collect().unwrap();
         KernelService
-            .render("  Kernel:", &data, &Colors::new(false))
+            .render("Kernel", &data, &Colors::new(false))
             .unwrap();
     }
 }

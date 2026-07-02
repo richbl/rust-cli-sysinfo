@@ -32,15 +32,10 @@ where
     T: Service + Send + Sync,
     T::Data: Send + Sync + 'static,
 {
-    /// `collect_erased()` delegates to the wrapped service's [`Service::collect`], boxing the
-    /// result
-    ///
     fn collect_erased(&self) -> CollectResult {
         Service::collect(self).map(|data| Box::new(data) as Box<dyn Any + Send + Sync>)
     }
-    /// `render_erased()` downcasts `data` back to the wrapped service's concrete `Data` type and
-    /// delegates to [`Service::render`]
-    ///
+
     fn render_erased(
         &self,
         label: &str,

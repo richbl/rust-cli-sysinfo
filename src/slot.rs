@@ -65,13 +65,10 @@ mod tests {
     struct DummyService;
 
     impl ErasedService for DummyService {
-        /// `collect_erased()` returns a dummy value for testing purposes
-        ///
         fn collect_erased(&self) -> CollectResult {
             Ok(Box::new(()))
         }
-        /// `render_erased()` is a no-op for testing purposes
-        ///
+
         fn render_erased(
             &self,
             _label: &str,
@@ -82,7 +79,7 @@ mod tests {
         }
     }
 
-    /// `meta()` returns a dummy `ServiceMeta` for testing purposes
+    /// `meta()` creates a dummy `ServiceMeta` for testing
     ///
     fn meta(token: &'static str, sort_order: u16) -> ServiceMeta {
         ServiceMeta {
@@ -93,7 +90,7 @@ mod tests {
         }
     }
 
-    /// `dummy_registry()` returns a dummy `ServiceRegistry` for testing purposes
+    /// `dummy_registry()` creates a dummy `ServiceRegistry` for testing
     ///
     fn dummy_registry() -> ServiceRegistry {
         ServiceRegistry::from_entries(vec![
@@ -103,17 +100,25 @@ mod tests {
         ])
     }
 
+    /// `resolve_no_unknown()` resolves a `SlotFilter` against a `ServiceRegistry`, asserting that
+    ///  no unknown tokens are encountered
+    ///
+    fn resolve_no_unknown(filter: &SlotFilter, registry: &ServiceRegistry) -> Option<Vec<usize>> {
+        filter.resolve(registry, |_, _| {
+            unreachable!("test bug: unknown token reached handler")
+        })
+    }
+
     // parse_token_list() tests
 
-    /// `parse_token_list_single_token()` asserts that parsing a single token succeeds
+    /// `parse_token_list_single_token()` tests that a single token is parsed correctly
     ///
     #[test]
     fn parse_token_list_single_token() {
         assert_eq!(parse_token_list("OS").unwrap(), vec!["OS".to_string()]);
     }
 
-    /// `parse_token_list_preserves_order()` asserts that parsing multiple tokens preserves their
-    /// order
+    /// `parse_token_list_preserves_order()` tests that the order of tokens is preserved in the output
     ///
     #[test]
     fn parse_token_list_preserves_order() {
@@ -123,8 +128,7 @@ mod tests {
         );
     }
 
-    /// `parse_token_list_uppercases_tokens()` asserts that parsing lowercases/mixed-case tokens
-    /// normalizes them to uppercase
+    /// `parse_token_list_uppercases_tokens()` tests that tokens are made uppercase
     ///
     #[test]
     fn parse_token_list_uppercases_tokens() {
@@ -134,28 +138,27 @@ mod tests {
         );
     }
 
-    /// `parse_token_list_empty_string_returns_err()` asserts that parsing an empty string
-    /// returns an error
+    /// `parse_token_list_empty_string_returns_err()` tests that an empty string is rejected
     ///
     #[test]
     fn parse_token_list_empty_string_returns_err() {
-        let result = parse_token_list("");
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
+        assert_eq!(
+            parse_token_list("").unwrap_err(),
+            "service token list cannot be empty"
+        );
     }
 
-    /// `parse_token_list_whitespace_only_returns_err()` asserts that parsing whitespace-only
-    /// input returns an error
+    /// `parse_token_list_whitespace_only_returns_err()` tests that whitespace-only strings are rejected
     ///
     #[test]
     fn parse_token_list_whitespace_only_returns_err() {
-        let result = parse_token_list("   ");
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
+        assert_eq!(
+            parse_token_list("   ").unwrap_err(),
+            "service token list cannot be empty"
+        );
     }
 
-    /// `parse_token_list_duplicate_tokens_are_allowed()` asserts that duplicate tokens are
-    /// permitted in parsing (resolution, not parsing, is where meaning is applied)
+    /// `parse_token_list_duplicate_tokens_are_allowed()` tests that duplicate tokens are allowed
     ///
     #[test]
     fn parse_token_list_duplicate_tokens_are_allowed() {
@@ -167,63 +170,47 @@ mod tests {
 
     // SlotFilter::resolve() tests
 
-    /// `resolve_default_returns_all_indices_in_registry_order()` asserts that `Default` resolves
-    /// to every index in the registry's display order
+    /// `resolve_default_returns_all_indices_in_registry_order()` tests that the default filter
+    /// returns all indices in registry order
     ///
     #[test]
     fn resolve_default_returns_all_indices_in_registry_order() {
         let registry = dummy_registry();
-        let resolved = SlotFilter::Default
-            .resolve(&registry, |_, _| {
-                unreachable!("test bug: unknown token reached handler")
-            })
-            .unwrap();
-        assert_eq!(resolved, vec![0, 1, 2]);
+        assert_eq!(
+            resolve_no_unknown(&SlotFilter::Default, &registry).unwrap(),
+            vec![0, 1, 2]
+        );
     }
 
-    /// `resolve_show_labeled_returns_none()` asserts that `ShowLabeled` resolves to `None`
+    /// `resolve_show_labeled_returns_none()` tests that the "show labeled" filter returns none
     ///
     #[test]
     fn resolve_show_labeled_returns_none() {
         let registry = dummy_registry();
-        let resolved = SlotFilter::ShowLabeled.resolve(&registry, |_, _| {
-            unreachable!("test bug: unknown token reached handler")
-        });
-        assert!(resolved.is_none());
+        assert!(resolve_no_unknown(&SlotFilter::ShowLabeled, &registry).is_none());
     }
 
-    /// `resolve_custom_maps_known_tokens_to_indices()` asserts that `Custom` resolves known
-    /// tokens to their registry indices, preserving requested order
+    /// `resolve_custom_maps_known_tokens_to_indices()` tests that the custom filter maps known tokens
+    /// to indices
     ///
     #[test]
     fn resolve_custom_maps_known_tokens_to_indices() {
         let registry = dummy_registry();
         let filter = SlotFilter::Custom(vec!["GPU".to_string(), "OS".to_string()]);
-        let resolved = filter
-            .resolve(&registry, |_, _| {
-                unreachable!("test bug: unknown token reached handler")
-            })
-            .unwrap();
-        assert_eq!(resolved, vec![2, 0]);
+        assert_eq!(resolve_no_unknown(&filter, &registry).unwrap(), vec![2, 0]);
     }
 
-    /// `resolve_custom_is_case_insensitive()` asserts that `Custom` resolution is
-    /// case-insensitive against registry tokens
+    /// `resolve_custom_is_case_insensitive()` tests that the custom filter is case-insensitive
     ///
     #[test]
     fn resolve_custom_is_case_insensitive() {
         let registry = dummy_registry();
         let filter = SlotFilter::Custom(vec!["cpu".to_string()]);
-        let resolved = filter
-            .resolve(&registry, |_, _| {
-                unreachable!("test bug: unknown token reached handler")
-            })
-            .unwrap();
-        assert_eq!(resolved, vec![1]);
+        assert_eq!(resolve_no_unknown(&filter, &registry).unwrap(), vec![1]);
     }
 
-    /// `resolve_custom_unknown_token_invokes_handler()` asserts that an unknown token invokes
-    /// the provided handler exactly once, with the offending token
+    /// `resolve_custom_unknown_token_invokes_handler()` tests that the custom filter invokes the
+    /// handler for unknown tokens
     ///
     #[test]
     fn resolve_custom_unknown_token_invokes_handler() {
@@ -236,18 +223,13 @@ mod tests {
         assert_eq!(resolved, Some(vec![usize::MAX]));
     }
 
-    /// `resolve_custom_duplicate_tokens_are_currently_allowed()` asserts that duplicate tokens
-    /// resolve to duplicate indices, matching the previous design's behavior
+    /// `resolve_custom_duplicate_tokens_are_currently_allowed()` tests that duplicate tokens are
+    /// currently allowed in the custom filter
     ///
     #[test]
     fn resolve_custom_duplicate_tokens_are_currently_allowed() {
         let registry = dummy_registry();
         let filter = SlotFilter::Custom(vec!["OS".to_string(), "OS".to_string()]);
-        let resolved = filter
-            .resolve(&registry, |_, _| {
-                unreachable!("test bug: unknown token reached handler")
-            })
-            .unwrap();
-        assert_eq!(resolved, vec![0, 0]);
+        assert_eq!(resolve_no_unknown(&filter, &registry).unwrap(), vec![0, 0]);
     }
 }

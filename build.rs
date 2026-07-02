@@ -1,27 +1,45 @@
 //! Scans `src/services/` at compile time and generates, into `OUT_DIR/services_gen.rs`:
 //!
-//!   1. a `pub mod <name>;` declaration for every service file found, and
-//!   2. a `build_all()` function that calls each service's `descriptor(ctx)` to assemble the
-//!      full list of `(ServiceMeta, Box<dyn ErasedService>)` entries the runtime registry needs.
-//!
-//! This is the single place that turns "a new file exists in `src/services/`" into "the binary
-//! knows about it." Nothing else in the crate is touched to add, rename, or remove a service —
-//! see the `descriptor()` convention used throughout `src/services/*.rs`.
+//!   1. A `pub mod <name>;` declaration for every service file found, and
+//!   2. A `build_all()` function that calls each service's `descriptor(ctx)` to assemble the
+//!      full list of `(ServiceMeta, Box<dyn ErasedService>)` entries the runtime registry needs
 //!
 //! Deliberately filesystem-only: this script never parses Rust source. Anything it can't infer
 //! from a filename it leaves for `rustc` to type-check via the fixed `descriptor()` signature,
-//! so a service that forgets to implement it fails the build with an ordinary, precise
-//! compiler error rather than a wrong codegen match.
+//! so a service that forgets to implement it fails the build with an ordinary compiler error
+//! rather than a wrong codegen match
 
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
+/// `build.rs` entry point... make it so!
+///
 fn main() {
     println!("cargo:rerun-if-changed=src/services");
 
     let services_dir = Path::new("src/services");
+    let names = collect_service_names(services_dir);
 
+    assert!(
+        !names.is_empty(),
+        "src/services must contain at least one service module"
+    );
+
+    let manifest_dir =
+        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo");
+
+    let mod_decls = generate_mod_declarations(&names, &manifest_dir);
+    let descriptor_calls = generate_descriptor_calls(&names);
+
+    let generated = format_generated_code(&mod_decls, &descriptor_calls);
+
+    write_generated_file(&generated);
+}
+
+/// `collect_service_names()` scans and sorts service module names from `src/services`
+///
+fn collect_service_names(services_dir: &Path) -> Vec<String> {
     let mut names: Vec<String> = fs::read_dir(services_dir)
         .expect("src/services must exist")
         .filter_map(Result::ok)
@@ -37,45 +55,40 @@ fn main() {
         })
         .collect();
 
-    // Sort for a deterministic, reviewable module order. Actual *display* order is controlled
-    // separately by each service's `ServiceMeta::sort_order` field (see `core::registry`), so
-    // renaming a file never reshuffles the CLI's output.
-    names.sort();
-
-    assert!(
-        !names.is_empty(),
-        "src/services must contain at least one service module"
-    );
-
-    let manifest_dir =
-        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo");
-
-    // An explicit `#[path = ...]` is required here (rather than a bare `pub mod <name>;`).
-    // Once this generated file is pulled in via `include!`, rustc resolves any *implicit*
-    // module file for `<name>` relative to OUT_DIR (where this generated file physically
-    // lives), not relative to `src/services/`. The explicit path makes the real location
-    // unambiguous regardless of where the `mod` item is textually assembled from.
+    // Sort for a deterministic, reviewable module order
     //
-    // Built via `fold` + `write!` into one growing `String` rather than
-    // `.map(|n| format!(...)).collect::<String>()`: the latter allocates and immediately
-    // discards a fresh `String` per iteration only to concatenate it into the final one, which
-    // is exactly what `clippy::format_collect` flags. `write!` into an accumulator allocates
-    // once (amortized) for the whole list.
-    let mod_decls = names.iter().fold(String::new(), |mut acc, name| {
+    // Actual display order is controlled separately by each service's `ServiceMeta::sort_order`
+    // field (see `core::registry`), so renaming a file never reshuffles the CLI's output
+    names.sort();
+    names
+}
+
+/// `generate_mod_declarations()` generates `#[path = ...]` module declarations for each service
+///
+fn generate_mod_declarations(names: &[String], manifest_dir: &str) -> String {
+    names.iter().fold(String::new(), |mut acc, name| {
         writeln!(
             acc,
             "#[path = \"{manifest_dir}/src/services/{name}.rs\"]\npub mod {name};"
         )
         .expect("writing to a String cannot fail");
         acc
-    });
+    })
+}
 
-    let descriptor_calls = names.iter().fold(String::new(), |mut acc, name| {
+/// `generate_descriptor_calls()` generates calls to each service's `descriptor()` function
+///
+fn generate_descriptor_calls(names: &[String]) -> String {
+    names.iter().fold(String::new(), |mut acc, name| {
         writeln!(acc, "        {name}::descriptor(ctx),").expect("writing to a String cannot fail");
         acc
-    });
+    })
+}
 
-    let generated = format!(
+/// `format_generated_code()` formats the complete generated code
+///
+fn format_generated_code(mod_decls: &str, descriptor_calls: &str) -> String {
+    format!(
         "// @generated by build.rs from the contents of src/services/ — do not edit by hand.\n\
          \n\
          {mod_decls}\n\
@@ -85,8 +98,12 @@ fn main() {
          ) -> Vec<(crate::core::meta::ServiceMeta, Box<dyn crate::core::erased::ErasedService>)> {{\n    \
              vec![\n{descriptor_calls}    ]\n\
          }}\n"
-    );
+    )
+}
 
+/// `write_generated_file()` writes the generated code to `OUT_DIR/services_gen.rs`
+///
+fn write_generated_file(generated: &str) {
     let out_path = Path::new(&std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"))
         .join("services_gen.rs");
 

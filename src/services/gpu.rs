@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use pci_ids::{Device, FromId, Vendor};
 
 use super::prelude::*;
+use crate::constants::{INDENT, LABEL_WIDTH};
 use crate::core::error::AppError;
 use crate::core::utils::read_hex_u16;
 
@@ -30,7 +31,7 @@ impl Service for GpuService {
     /// `render()` renders GPU model name(s) as a single row, newline-separated for multiple GPUs
     ///
     fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        let separator = format!("\n{:width$}", "", width = label.len() + 1);
+        let separator = format!("\n{:width$}", "", width = INDENT.len() + LABEL_WIDTH + 1);
         let gpu_str = if data.models.is_empty() {
             "Unknown".to_string()
         } else {
@@ -108,4 +109,19 @@ fn gpu_name_from_card(card_path: &Path) -> Result<Option<String>, AppError> {
     );
 
     Ok(Some(name))
+}
+
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "GPU",
+            label: "GPU(s)",
+            description: "GPU model(s)",
+            sort_order: 3,
+        },
+        Box::new(GpuService),
+    )
 }

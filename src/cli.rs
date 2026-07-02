@@ -2,8 +2,9 @@ use std::io::{self, IsTerminal};
 use std::process;
 
 use crate::constants::{APP_NAME, SEP, VERSION};
+use crate::core::registry::ServiceRegistry;
 use crate::presentation::colors::Colors;
-use crate::slot::{ServiceSlot, SlotFilter};
+use crate::slot::{self, SlotFilter};
 
 /// `Opts` contains the parsed command-line options for the utility
 pub struct Opts {
@@ -105,18 +106,39 @@ fn parse_slot_filter(parser: &mut lexopt::Parser) -> SlotFilter {
 
 /// `parse_slot_list()` parses a hyphen-separated token string into a `SlotFilter::Custom`
 ///
+/// Note: only *syntax* is validated here (non-empty). Whether each token names a service that
+/// actually exists can only be known once `build.rs`'s discovered services are loaded — that
+/// check happens in [`crate::slot::SlotFilter::resolve`], called immediately after the registry
+/// is constructed in `main()`
+///
 fn parse_slot_list(input: &str) -> SlotFilter {
-    let slots = ServiceSlot::parse_list(input).unwrap_or_else(|e| fail(&e));
-    SlotFilter::Custom(slots)
+    let tokens = slot::parse_token_list(input).unwrap_or_else(|e| fail(&e));
+    SlotFilter::Custom(tokens)
+}
+
+/// `fail_unknown_token()` prints an unknown-service-token error, listing the tokens actually
+/// discovered by `build.rs`, and exits
+///
+pub fn fail_unknown_token(token: &str, registry: &ServiceRegistry) -> usize {
+    let available: String = registry
+        .all_meta()
+        .map(|m| m.token)
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    fail(&format!(
+        "Unknown service token '{token}' (available: {available})\n\
+         (run `-s` with no argument to see available service tokens)"
+    ))
 }
 
 /// `print_usage()` prints a formatted usage/help message to stdout
 ///
-fn print_usage(c: &Colors) {
+pub fn print_usage(c: &Colors) {
     let options_text = format!(
         "  Options:
     {cyan}-s, --services [TOKENS]{reset}     Select and order available services: 
-                                Run -s with no arguments to see available tokens
+                                  Run -s with no arguments to see available tokens
 
     {cyan}-d, --disk <path>{reset}           Disk mount to report disk usage [default: /home]
     {cyan}-c, --cpu-sample-rate <ms>{reset}  CPU sampling window in milliseconds [default: 250]

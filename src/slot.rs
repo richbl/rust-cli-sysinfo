@@ -1,360 +1,253 @@
+use crate::core::registry::ServiceRegistry;
+
 /// `SlotFilter` represents the three operating modes of the `-s` flag
 pub enum SlotFilter {
-    /// No `-s` flag: render the full default utility output
+    /// No `-s` flag: render the full default utility output, in the registry's display order.
     Default,
-    /// `-s` with no argument: render labeled output and exit
+    /// `-s` with no argument: render the labeled reference table and exit.
     ShowLabeled,
-    /// `-s TOKENS`: render only the specified slots in the given order
-    Custom(Vec<ServiceSlot>),
-}
-
-/// `define_slots!` generates the `ServiceSlot` enum and its property accessors
-macro_rules! define_slots {
-    ($($variant:ident: $token:literal, $label:literal, $description:literal);* $(;)?) => {
-
-        /// `ServiceSlot` identifies each service row in the output
-        #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-        pub enum ServiceSlot {
-            $($variant),*
-        }
-
-        /// Static compilation of all available slots, keeping their default order
-        const ALL_SLOTS: &[ServiceSlot] = &[
-            $(ServiceSlot::$variant),*
-        ];
-
-        impl ServiceSlot {
-            /// `token()` returns the token string for this slot
-            ///
-            #[must_use]
-            pub const fn token(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $token),*
-                }
-            }
-
-            /// `label()` returns the display label string for this slot
-            ///
-            #[must_use]
-            pub const fn label(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $label),*
-                }
-            }
-
-            /// `description()` returns a description shown in `-s` labeled output
-            ///
-            #[must_use]
-            pub const fn description(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $description),*
-                }
-            }
-
-            /// `all()` returns the default ordered list of all slots as a static slice, avoiding heap allocation
-            ///
-            #[must_use]
-            pub const fn all() -> &'static [Self] {
-                ALL_SLOTS
-            }
-
-            /// `from_token()` looks up a `ServiceSlot` by its token string (case-sensitive lookup)
-            ///
-            fn from_token(token: &str) -> Option<Self> {
-                match token {
-                    $($token => Some(Self::$variant),)*
-                    _ => None,
-                }
-            }
-        }
-    }
-}
-
-// Generates the enum and safe properties at compile time
-define_slots! {
-    Os:   "OS",   "  OS:",             "Operating system name and version";
-    Hst:  "HST",  "  Hostname:",       "System hostname";
-    Cpu:  "CPU",  "  CPU:",            "CPU model";
-    Gpu:  "GPU",  "  GPU(s):",         "GPU model(s)";
-    Knl:  "KNL",  "  Kernel:",         "Linux kernel version";
-    Upt:  "UPT",  "  Uptime:",         "System uptime";
-    Load: "LOAD", "  Load averages:",  "Load averages (1m, 5m, 15m)";
-    CpuU: "CPUU", "  CPU usage:",      "CPU usage %";
-    RamU: "RAMU", "  Memory usage:",   "Memory usage % (Used/Total)";
-    DskU: "DSKU", "  Disk usage:",     "Disk usage % (Used/Total)";
-    Usr:  "USR",  "  User(s):",         "Current users";
-}
-
-impl ServiceSlot {
-    /// `parse_list()` parses a hyphen-separated token string (e.g. `"HST-OS-KNL"`) into an
-    /// ordered `Vec<ServiceSlot>`
-    ///
-    pub fn parse_list(input: &str) -> Result<Vec<Self>, String> {
-        if input.trim().is_empty() {
-            return Err("service token list cannot be empty".to_string());
-        }
-
-        input
-            .split('-')
-            .map(|raw| {
-                let token = raw.trim().to_uppercase();
-                Self::from_token(&token)
-                    .ok_or_else(|| format!("Unknown service token '{token}' (run `-s` with no argument to see available service tokens)"))
-            })
-            .collect()
-    }
+    /// `-s TOKENS`: render only the specified services, in the given order.
+    Custom(Vec<String>),
 }
 
 impl SlotFilter {
-    /// `to_active_slots()` returns `Some(active slots)` for renderable filters, or `None` for `ShowLabeled`
+    /// `resolve()` turns this filter into concrete registry indices, or `None` for
+    /// `ShowLabeled`. Unknown tokens cause the process to exit with a usage error via
+    /// `on_unknown_token`
     ///
-    pub fn to_active_slots(&self) -> Option<Vec<ServiceSlot>> {
+    pub fn resolve(
+        &self,
+        registry: &ServiceRegistry,
+        on_unknown_token: impl Fn(&str, &ServiceRegistry) -> usize,
+    ) -> Option<Vec<usize>> {
         match self {
-            Self::Default => Some(ServiceSlot::all().to_vec()),
-            Self::Custom(slots) => Some(slots.clone()),
+            Self::Default => Some((0..registry.len()).collect()),
             Self::ShowLabeled => None,
+            Self::Custom(tokens) => Some(
+                tokens
+                    .iter()
+                    .map(|token| {
+                        registry
+                            .index_of(token)
+                            .unwrap_or_else(|| on_unknown_token(token, registry))
+                    })
+                    .collect(),
+            ),
         }
     }
+}
+
+/// `parse_token_list()` splits a hyphen-separated token string (e.g. `"HST-OS-KNL"`) into
+/// uppercase tokens
+/// This only validates *syntax* (non-empty): validity against known services is deferred to
+/// [`SlotFilter::resolve`]
+///
+pub fn parse_token_list(input: &str) -> Result<Vec<String>, String> {
+    if input.trim().is_empty() {
+        return Err("service token list cannot be empty".to_string());
+    }
+
+    Ok(input
+        .split('-')
+        .map(|raw| raw.trim().to_uppercase())
+        .collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::erased::{CollectResult, ErasedService};
+    use crate::core::error::AppError;
+    use crate::core::meta::ServiceMeta;
+    use crate::presentation::colors::Colors;
+    use std::any::Any;
 
-    // ServiceSlot::all() test
+    struct DummyService;
 
-    /// `all_returns_every_defined_slot()` asserts that all defined slots are returned by `all()`
-    ///
-    #[test]
-    fn all_returns_every_defined_slot() {
-        assert_eq!(ServiceSlot::all().len(), 11);
+    impl ErasedService for DummyService {
+        /// `collect_erased()` returns a dummy value for testing purposes
+        ///
+        fn collect_erased(&self) -> CollectResult {
+            Ok(Box::new(()))
+        }
+        /// `render_erased()` is a no-op for testing purposes
+        ///
+        fn render_erased(
+            &self,
+            _label: &str,
+            _data: &(dyn Any + Send + Sync),
+            _colors: &Colors,
+        ) -> Result<(), AppError> {
+            Ok(())
+        }
     }
 
-    /// `all_first_slot_is_os()` asserts that the first slot in the default list is `Os`
+    /// `meta()` returns a dummy `ServiceMeta` for testing purposes
     ///
-    #[test]
-    fn all_first_slot_is_os() {
-        assert_eq!(ServiceSlot::all()[0], ServiceSlot::Os);
+    fn meta(token: &'static str, sort_order: u16) -> ServiceMeta {
+        ServiceMeta {
+            token,
+            label: "  Dummy",
+            description: "a dummy service for tests",
+            sort_order,
+        }
     }
 
-    /// `all_last_slot_is_usr()` asserts that the last slot in the default list is `Usr`
+    /// `dummy_registry()` returns a dummy `ServiceRegistry` for testing purposes
+    ///
+    fn dummy_registry() -> ServiceRegistry {
+        ServiceRegistry::from_entries(vec![
+            (meta("OS", 0), Box::new(DummyService)),
+            (meta("CPU", 1), Box::new(DummyService)),
+            (meta("GPU", 2), Box::new(DummyService)),
+        ])
+    }
+
+    // parse_token_list() tests
+
+    /// `parse_token_list_single_token()` asserts that parsing a single token succeeds
     ///
     #[test]
-    fn all_last_slot_is_usr() {
+    fn parse_token_list_single_token() {
+        assert_eq!(parse_token_list("OS").unwrap(), vec!["OS".to_string()]);
+    }
+
+    /// `parse_token_list_preserves_order()` asserts that parsing multiple tokens preserves their
+    /// order
+    ///
+    #[test]
+    fn parse_token_list_preserves_order() {
         assert_eq!(
-            ServiceSlot::all().last().copied().unwrap(),
-            ServiceSlot::Usr
+            parse_token_list("OS-CPU-GPU").unwrap(),
+            vec!["OS".to_string(), "CPU".to_string(), "GPU".to_string()]
         );
     }
 
-    /// `all_contains_no_duplicates()` asserts that the slot list contains no duplicates
+    /// `parse_token_list_uppercases_tokens()` asserts that parsing lowercases/mixed-case tokens
+    /// normalizes them to uppercase
     ///
     #[test]
-    fn all_contains_no_duplicates() {
-        let slots = ServiceSlot::all();
-        let mut seen = std::collections::HashSet::new();
-        for slot in slots {
-            assert!(seen.insert(slot), "duplicate slot found: {slot:?}");
-        }
-    }
-
-    // ServiceSlot::token() test
-
-    /// `token_os_is_uppercase_os()` asserts that the token for the `Os` slot is "OS"
-    ///
-    #[test]
-    fn token_os_is_uppercase_os() {
-        assert_eq!(ServiceSlot::Os.token(), "OS");
-    }
-
-    /// `token_hst_is_uppercase_hst()` asserts that the token for the `Hst` slot is "HST"
-    ///
-    #[test]
-    fn token_hst_is_uppercase_hst() {
-        assert_eq!(ServiceSlot::Hst.token(), "HST");
-    }
-
-    /// `token_cpuu_has_double_u()` asserts that the token for the `CpuU` slot is "CPUU"
-    ///
-    #[test]
-    fn token_cpuu_has_double_u() {
-        assert_eq!(ServiceSlot::CpuU.token(), "CPUU");
-    }
-
-    /// `all_tokens_are_non_empty()` asserts that all slot tokens are non-empty
-    ///
-    #[test]
-    fn all_tokens_are_non_empty() {
-        for &slot in ServiceSlot::all() {
-            assert!(!slot.token().is_empty(), "{slot:?} has an empty token");
-        }
-    }
-
-    /// `all_tokens_are_uppercase()` asserts that all slot tokens are uppercase
-    ///
-    #[test]
-    fn all_tokens_are_uppercase() {
-        for &slot in ServiceSlot::all() {
-            let token = slot.token();
-            assert_eq!(
-                token,
-                token.to_uppercase(),
-                "{slot:?} token is not uppercase"
-            );
-        }
-    }
-
-    // ServiceSlot::description() test
-
-    /// `all_descriptions_are_non_empty()` asserts that all slot descriptions are non-empty
-    ///
-    #[test]
-    fn all_descriptions_are_non_empty() {
-        for &slot in ServiceSlot::all() {
-            assert!(
-                !slot.description().is_empty(),
-                "{slot:?} has an empty description"
-            );
-        }
-    }
-
-    // ServiceSlot::label() test
-
-    /// `all_labels_are_non_empty()` asserts that all slot labels are non-empty
-    ///
-    #[test]
-    fn all_labels_are_non_empty() {
-        for &slot in ServiceSlot::all() {
-            assert!(!slot.label().is_empty(), "{slot:?} has an empty label");
-        }
-    }
-
-    /// `all_labels_start_with_spaces_and_end_with_colon()` asserts that all slot labels have two
-    /// leading spaces and a trailing colon
-    ///
-    #[test]
-    fn all_labels_start_with_spaces_and_end_with_colon() {
-        for &slot in ServiceSlot::all() {
-            let label = slot.label();
-            assert!(
-                label.starts_with("  "),
-                "{slot:?} label does not start with spaces: {label:?}"
-            );
-            assert!(
-                label.ends_with(':'),
-                "{slot:?} label does not end with colon: {label:?}"
-            );
-        }
-    }
-
-    /// `label_dsku_is_disk_usage()` asserts that the label for the `DskU` slot is correct
-    ///
-    #[test]
-    fn label_dsku_is_disk_usage() {
-        assert_eq!(ServiceSlot::DskU.label(), "  Disk usage:");
-    }
-
-    // ServiceSlot::parse_list() test
-
-    /// `parse_list_single_known_token()` asserts that parsing a single known token succeeds
-    ///
-    #[test]
-    fn parse_list_single_known_token() {
-        let result = ServiceSlot::parse_list("OS");
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![ServiceSlot::Os]);
-    }
-
-    /// `parse_list_multiple_tokens_preserves_order()` asserts that parsing multiple tokens
-    /// preserves their order
-    ///
-    #[test]
-    fn parse_list_multiple_tokens_preserves_order() {
-        let result = ServiceSlot::parse_list("OS-CPU-GPU");
-        assert!(result.is_ok());
-        let slots = result.unwrap();
+    fn parse_token_list_uppercases_tokens() {
         assert_eq!(
-            slots,
-            vec![ServiceSlot::Os, ServiceSlot::Cpu, ServiceSlot::Gpu]
+            parse_token_list("os-cpu").unwrap(),
+            vec!["OS".to_string(), "CPU".to_string()]
         );
     }
 
-    /// `parse_list_is_case_insensitive()` asserts that token parsing is case-insensitive
-    ///
-    #[test]
-    fn parse_list_is_case_insensitive() {
-        let lower = ServiceSlot::parse_list("os-cpu");
-        let upper = ServiceSlot::parse_list("OS-CPU");
-        let mixed = ServiceSlot::parse_list("Os-Cpu");
-        assert_eq!(lower.unwrap(), upper.as_ref().unwrap().clone());
-        assert_eq!(mixed.unwrap(), upper.unwrap());
-    }
-
-    /// `parse_list_all_tokens_round_trips()` asserts that parsing the joined string of all tokens
-    /// round-trips correctly
-    ///
-    #[test]
-    fn parse_list_all_tokens_round_trips() {
-        let canonical = ServiceSlot::all();
-        let joined: String = canonical
-            .iter()
-            .map(|s| s.token())
-            .collect::<Vec<_>>()
-            .join("-");
-        let parsed = ServiceSlot::parse_list(&joined).expect("all tokens must parse");
-        assert_eq!(parsed, canonical);
-    }
-
-    /// `parse_list_unknown_token_returns_err_containing_token()` asserts that parsing an unknown
-    /// token returns an error containing that token
-    ///
-    #[test]
-    fn parse_list_unknown_token_returns_err_containing_token() {
-        let result = ServiceSlot::parse_list("INVALID");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("INVALID"));
-    }
-
-    /// `parse_list_partially_invalid_fails_on_bad_token()` asserts that parsing a list containing
-    /// an invalid token fails and references the bad token
-    ///
-    #[test]
-    fn parse_list_partially_invalid_fails_on_bad_token() {
-        let result = ServiceSlot::parse_list("OS-BOGUS-CPU");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("BOGUS"));
-    }
-
-    /// `parse_list_empty_string_returns_err()` asserts that parsing an empty string returns an
-    /// error
-    ///
-    #[test]
-    fn parse_list_empty_string_returns_err() {
-        let result = ServiceSlot::parse_list("");
-        assert!(result.is_err(), "empty input must not silently succeed");
-        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
-    }
-
-    /// `parse_list_whitespace_only_returns_err()` asserts that parsing whitespace-only input
+    /// `parse_token_list_empty_string_returns_err()` asserts that parsing an empty string
     /// returns an error
     ///
     #[test]
-    fn parse_list_whitespace_only_returns_err() {
-        let result = ServiceSlot::parse_list("   ");
+    fn parse_token_list_empty_string_returns_err() {
+        let result = parse_token_list("");
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "service token list cannot be empty");
     }
 
-    /// `parse_list_duplicate_tokens_are_currently_allowed()` asserts that duplicate tokens are
-    /// permitted in parsing
+    /// `parse_token_list_whitespace_only_returns_err()` asserts that parsing whitespace-only
+    /// input returns an error
     ///
     #[test]
-    fn parse_list_duplicate_tokens_are_currently_allowed() {
-        let result = ServiceSlot::parse_list("OS-OS-CPU");
-        assert!(result.is_ok());
-        let slots = result.unwrap();
-        assert_eq!(slots.len(), 3);
-        assert_eq!(slots[0], ServiceSlot::Os);
-        assert_eq!(slots[1], ServiceSlot::Os);
+    fn parse_token_list_whitespace_only_returns_err() {
+        let result = parse_token_list("   ");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "service token list cannot be empty");
+    }
+
+    /// `parse_token_list_duplicate_tokens_are_allowed()` asserts that duplicate tokens are
+    /// permitted in parsing (resolution, not parsing, is where meaning is applied)
+    ///
+    #[test]
+    fn parse_token_list_duplicate_tokens_are_allowed() {
+        let result = parse_token_list("OS-OS-CPU").unwrap();
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], "OS");
+        assert_eq!(result[1], "OS");
+    }
+
+    // SlotFilter::resolve() tests
+
+    /// `resolve_default_returns_all_indices_in_registry_order()` asserts that `Default` resolves
+    /// to every index in the registry's display order
+    ///
+    #[test]
+    fn resolve_default_returns_all_indices_in_registry_order() {
+        let registry = dummy_registry();
+        let resolved = SlotFilter::Default
+            .resolve(&registry, |_, _| {
+                unreachable!("test bug: unknown token reached handler")
+            })
+            .unwrap();
+        assert_eq!(resolved, vec![0, 1, 2]);
+    }
+
+    /// `resolve_show_labeled_returns_none()` asserts that `ShowLabeled` resolves to `None`
+    ///
+    #[test]
+    fn resolve_show_labeled_returns_none() {
+        let registry = dummy_registry();
+        let resolved = SlotFilter::ShowLabeled.resolve(&registry, |_, _| {
+            unreachable!("test bug: unknown token reached handler")
+        });
+        assert!(resolved.is_none());
+    }
+
+    /// `resolve_custom_maps_known_tokens_to_indices()` asserts that `Custom` resolves known
+    /// tokens to their registry indices, preserving requested order
+    ///
+    #[test]
+    fn resolve_custom_maps_known_tokens_to_indices() {
+        let registry = dummy_registry();
+        let filter = SlotFilter::Custom(vec!["GPU".to_string(), "OS".to_string()]);
+        let resolved = filter
+            .resolve(&registry, |_, _| {
+                unreachable!("test bug: unknown token reached handler")
+            })
+            .unwrap();
+        assert_eq!(resolved, vec![2, 0]);
+    }
+
+    /// `resolve_custom_is_case_insensitive()` asserts that `Custom` resolution is
+    /// case-insensitive against registry tokens
+    ///
+    #[test]
+    fn resolve_custom_is_case_insensitive() {
+        let registry = dummy_registry();
+        let filter = SlotFilter::Custom(vec!["cpu".to_string()]);
+        let resolved = filter
+            .resolve(&registry, |_, _| {
+                unreachable!("test bug: unknown token reached handler")
+            })
+            .unwrap();
+        assert_eq!(resolved, vec![1]);
+    }
+
+    /// `resolve_custom_unknown_token_invokes_handler()` asserts that an unknown token invokes
+    /// the provided handler exactly once, with the offending token
+    ///
+    #[test]
+    fn resolve_custom_unknown_token_invokes_handler() {
+        let registry = dummy_registry();
+        let filter = SlotFilter::Custom(vec!["BOGUS".to_string()]);
+        let resolved = filter.resolve(&registry, |token, _registry| {
+            assert_eq!(token, "BOGUS");
+            usize::MAX
+        });
+        assert_eq!(resolved, Some(vec![usize::MAX]));
+    }
+
+    /// `resolve_custom_duplicate_tokens_are_currently_allowed()` asserts that duplicate tokens
+    /// resolve to duplicate indices, matching the previous design's behavior
+    ///
+    #[test]
+    fn resolve_custom_duplicate_tokens_are_currently_allowed() {
+        let registry = dummy_registry();
+        let filter = SlotFilter::Custom(vec!["OS".to_string(), "OS".to_string()]);
+        let resolved = filter
+            .resolve(&registry, |_, _| {
+                unreachable!("test bug: unknown token reached handler")
+            })
+            .unwrap();
+        assert_eq!(resolved, vec![0, 0]);
     }
 }

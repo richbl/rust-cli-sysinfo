@@ -34,6 +34,21 @@ impl Service for CpuModelService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "CPU",
+            label: "CPU",
+            description: "CPU model",
+            sort_order: 2,
+        },
+        Box::new(CpuModelService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -68,7 +83,7 @@ mod tests {
     fn render_does_not_panic() {
         let data = CpuModelService.collect().unwrap();
         CpuModelService
-            .render("  CPU:", &data, &Colors::new(false))
+            .render("CPU", &data, &Colors::new(false))
             .unwrap();
     }
 }

@@ -58,6 +58,21 @@ impl Service for UsersService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "USR",
+            label: "User(s)",
+            description: "Current users",
+            sort_order: 10,
+        },
+        Box::new(UsersService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -78,6 +93,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = UsersService.collect().unwrap();
-        let _ = UsersService.render("  User(s):", &data, &Colors::new(false));
+        let _ = UsersService.render("User(s)", &data, &Colors::new(false));
     }
 }

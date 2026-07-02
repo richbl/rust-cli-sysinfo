@@ -28,6 +28,21 @@ impl Service for HostnameService {
     }
 }
 
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "HST",
+            label: "Hostname",
+            description: "System hostname",
+            sort_order: 1,
+        },
+        Box::new(HostnameService),
+    )
+}
+
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
@@ -56,7 +71,7 @@ mod tests {
 
         // render() writes to stdout; we just verify it does not panic
         HostnameService
-            .render("  Hostname:", &data, &Colors::new(false))
+            .render("Hostname", &data, &Colors::new(false))
             .unwrap();
     }
 }

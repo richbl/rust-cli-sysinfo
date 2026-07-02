@@ -21,7 +21,7 @@ pub struct DiskService {
 impl DiskService {
     /// `new()` creates a new `DiskService`
     ///
-    pub fn new(ctx: &crate::core::context::ServiceContext) -> Self {
+    pub fn new(ctx: &ServiceContext) -> Self {
         Self {
             mount: ctx.disk_mount.clone(),
         }
@@ -95,4 +95,19 @@ impl Service for DiskService {
         print_row(label, &disk_str, &disk_thresh, c);
         Ok(())
     }
+}
+
+/// `descriptor()` is this service's registration point, discovered automatically by
+/// `build.rs`
+///
+pub fn descriptor(ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>) {
+    (
+        ServiceMeta {
+            token: "DSKU",
+            label: "Disk usage",
+            description: "Disk usage % (Used/Total)",
+            sort_order: 9,
+        },
+        Box::new(DiskService::new(ctx)),
+    )
 }

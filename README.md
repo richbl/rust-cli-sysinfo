@@ -7,13 +7,49 @@
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo"><img alt="Link to Codeberg Mirror" src="https://badgen.net/badge/icon/Rust-CLI-SysInfo?icon=codeberg&label=codeberg%20mirror"></a>
 <!-- markdownlint-enable MD033 -->
 
-**Rust-CLI-Sysinfo** (RCS) is a simple Rust-based system services utility that runs in a Linux terminal, offering a modular and customizable way to display the status of various system services.
+**Rust-CLI-Sysinfo** (RCS) is a lightweight, modular Rust utility for the Linux terminal that displays the status of customizable system services
+
+## RCS Features
+
+- **Comprehensive System Status**
+    - Displays system diagnostics right out of the box:
+
+        - Operating system
+        - Hostname
+        - CPU details and real-time usage
+        - GPU details
+        - Kernel version
+        - System uptime
+        - System load averages (over 1, 5, and 15 minutes)
+        - Memory usage
+        - Disk usage (defaults to `/home`, customizable via `-d`/`--disk`)
+        - Currently logged-in users
+
+- **Customizable Services Layout**
+    - Select exactly which service components to display and specify their order using service tokens (see `-s`/`--services` for details)
+  
+- **Custom New Services**
+    - New system services can be added easily by creating a new service file, dropping it into the `src/services` folder: RCS will automatically detect and render it as a available new service
+
+- **Visual Service Status Indicators**
+    - Color-coded tracking for CPU, memory, and disk utilization thresholds:
+
+        - **Normal:** Green
+        - **Warning:** Yellow
+        - **Critical:** Red
+  
+- **Configuration-Free**
+    - No complex dotfiles or external configurations to track down
+    - Manage **everything** directly via command-line flags
+  
+- **Highly Efficient**
+    - Written in Rust for maximum performance, compiling down to a single binary with no external runtime dependencies
 
 ## RCS Screenshots
 
 ### The Default RCS Output
 
-The default output of the `rust-cli-sysinfo` utility is shown below. Notice that several of the services are (optionally) colored to indicate their status:
+The standard output of the utility displays components with status-aware color coding:
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -23,7 +59,7 @@ The default output of the `rust-cli-sysinfo` utility is shown below. Notice that
 
 ### The RCS Help Output
 
-Calling `rust-cli-sysinfo -h` (or `rust-cli-sysinfo --help`) displays the following help output:
+Call `rust-cli-sysinfo -h` (or `--help`) to view the complete CLI options:
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -33,7 +69,7 @@ Calling `rust-cli-sysinfo -h` (or `rust-cli-sysinfo --help`) displays the follow
 
 ### Customizing RCS with Service Tokens
 
-One of the more useful features of **Rust-CLI-Sysinfo** is the ability to configure any of the available services using service tokens. The output of the service tokens display called with `rust-cli-sysinfo -s` (or `rust-cli-sysinfo --services`) is shown below:
+Run `rust-cli-sysinfo -s` (or `--services`) to display all available individual service tokens:
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -41,18 +77,15 @@ One of the more useful features of **Rust-CLI-Sysinfo** is the ability to config
 </p>
 <!-- markdownlint-enable MD033 -->
 
-#### A Customized RCS Output
+#### Customized RCS Output
 
-The following screenshot shows the output of **Rust-CLI-Sysinfo** when configured with service tokens. In the screenshot below, **Rust-CLI-Sysinfo** has been configured to display only the following services:
+You can combine tokens to isolate and reorder specific services. For example, to focus exclusively on logged-in users (USR), OS details (OS), memory (RAMU), disk (DSKU), CPU (CPU), and GPU (GPU), use the service token layout string:
 
-- Users currently logged into the system
-- OS name/version
-- Memory usage
-- Disk usage
-- CPU details
-- GPU(s) details
+```console
+rust-cli-sysinfo -s USR-OS-RAMU-DSKU-CPU-GPU
+```
 
-The command used to generate this output is `rust-cli-sysinfo -s USR-OS-RAMU-DSKU-CPU-GPU`.
+This will result in the following output:
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -62,101 +95,78 @@ The command used to generate this output is `rust-cli-sysinfo -s USR-OS-RAMU-DSK
 
 ## Creating New RCS Services
 
-Don't see a service that's currently available in **Rust-CLI-Sysinfo**? No problem!
+Want to create a new service that doesn't yet exist in RCS?
 
-You can create your own custom services following a "zero touch" approach, where each service is implemented *in a single Rust file*, and that service is then automatically rendered by the utility when compiled.
+RCS leverages a **"zero-touch architecture"**, where every service is completely isolated within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a new service file and rebuild the project.
 
 To create a new RCS service:
 
-1. Create a new Rust file in the `src/services` directory of the project. Use one of the existing service files as a working example, or take a look at the well-documented `template.rs` file for a simple example of a RCS service
+1. Create a new `.rs` file inside the `src/services` directory (e.g., `ip_address.rs`). Use an existing service file in `src/services` or inspect the well-documented `template.rs` file as a good starting point.
 
-1. Compile the project and run `rust-cli-sysinfo`. Your new service will be rendered by default. That's it!
+2. Build the project (`cargo build --release`). Your new module will instantly integrate into the default output stack.
 
-**One file: one service. Done.**
+**One service.**  
+**One file.**  
+**Done.**  
 
-## RCS Features
+## Requirements & Installation
 
-- Displays the status of various system services, including:
-    - Linux distribution name and version
-    - Hostname
-    - CPU details
-    - GPU details
-    - Kernel version
-    - Uptime
-    - System load average (over 1, 5, and 15 minutes)
-    - CPU usage
-    - Memory usage
-    - Disk usage (defaults to `/home`, but can be configured with the `-d/--disk` flag)
-    - Users currently logged into the system
+### Requirements
 
-- Create your own custom services to display additional system information, such as:
-    - Network interface details (e.g., IP address, MAC address, etc.)
-    - Battery status
-    - Temperature sensor(s)
-    - What else?
+- **Run-Time**
+    - Any standard modern Linux environment
+    - **Rust-CLI-Sysinfo** releases include a pre-compiled binary that runs natively on a Linux AMD64 architecture
+  
+- **Build-Time**
+    - If you're interested in compiling from source, you'll need a functioning installation of the Rust toolchain (using Cargo)
 
-- Configurable service tokens, allowing users to choose which services to display, and the order in which they should be displayed
+### Installation
 
-- Color status indicators for CPU, memory, and disk usage, with threshold levels represented by:
-    - Normal (green)
-    - Warning (yellow)
-    - Critical (red)
+Grab the pre-compiled binary directly from the GitHub Releases Page and place it somewhere in your local system path:
 
-- Display configuration options, including:
-    - `--no-color`: disable colored status indicators in the output
-    - `--no-clear`: disable clearing the screen before running the utility
+```bash
+cp rust-cli-sysinfo ~/.local/bin/
+```
 
-- Developed explicitly without the need for an external configuration file: configure everything with command line flags
+That's it! You can now run `rust-cli-sysinfo` from within any terminal session.
 
-- This is a Linux-only utility, designed to be lightweight and efficient, relying on native system calls and libraries
-    - No external dependencies
+### Compiling from Source
 
-- Built using Rust, ensuring high performance and reliability
+If you prefer to compile this project from sources, here are the steps:
 
-## Rationale
+```console
+git clone https://github.com/richbl/rust-cli-sysinfo.git
+cd rust-cli-sysinfo
+cargo build --release --bin rust-cli-sysinfo
+cp target/release/rust-cli-sysinfo ~/.local/bin/
+```
 
-- The goal of **Rust-CLI-Sysinfo** is to create a simple, efficient, and modular terminal-based utility for presenting the status of various system services in Linux
-
-## Requirements
-
-- **Rust-CLI-Sysinfo** is designed to run natively on Linux systems, with no other requirements
-
-However, if you prefer to build **Rust-CLI-Sysinfo** from project sources, you'll need to have Rust installed on your system.
-
-## Installation
-
-Simply copy the `rust-cli-sysinfo` binary from the latest release to your system (e.g., `/usr/local/bin` or `/home/[user]/.local/bin`). You can find the latest release on the [GitHub releases page](https://github.com/richbl/rust-cli-sysinfo/releases).
-
-### Building the RCS Project from Sources
-
-1. To build the project, clone the project onto your system and run the following command in the root directory of the project:
-
-    ```console
-    cargo build --release --bin rust-cli-sysinfo
-    ```
-
-2. Copy the resulting binary from `target/release/rust-cli-sysinfo` to your desired location (e.g., `/usr/local/bin` or `/home/[user]/.local/bin`)
-
-3. That's it. You can now run the application by executing `rust-cli-sysinfo` in your terminal
+Done!
 
 ## Usage
 
-- To run the utility, simply execute `rust-cli-sysinfo` in your terminal. By default, the utility will clear the terminal and display the status of all available system services.
+Simply invoke the tool from your terminal session:
 
-- To get help information about the available command-line options, run `rust-cli-sysinfo -h` (or `rust-cli-sysinfo --help`)
+```bash
+rust-cli-sysinfo
+```
 
-### Running in a New Terminal Session
+To display help, use the `-h` or `--help` flag:
 
-I've added a call to `rust-cli-sysinfo` in my `.bashrc` file, so it runs every time I open a new terminal window.
+```bash
+rust-cli-sysinfo -h
+```
 
-> This is the use case that I had in mind when I created this project. It's a quick way to get an overview of the status of various system services without having to run various commands or run separate system utilities.
+### Shell Integration (Recommended)
+
+Adding the binary call to the end of your shell startup configuration script (e.g., `~/.bashrc` or `~/.zshrc`) will render **rust-cli-sysinfo** services output in your environment every time a new session starts up.
+
+Nice!
 
 ## Roadmap
 
-In general, this is a pretty straightforward executable doing some pretty basic stuff, but if you have any thoughts or ideas for improvements, please let me know.
+RCS is designed to remain lean and fast, but some goals for upcoming releases include:
 
-That said, here are some items planned for future **Rust-CLI-Sysinfo** releases:
-
-- [X] Make the addition of new services easier to implement
-- [ ] Add support for non-Linux systems (e.g., macOS, Windows)
-- [ ] Add new services (of course)...
+- [x] Streamline modular service generation patterns (Zero-touch compilation)
+- [ ] Additional metric services (network interfaces, thermal sensors, etc.)
+- [ ] Cross-platform compatibility expansion (macOS and Windows support profiles)

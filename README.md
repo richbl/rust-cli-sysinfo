@@ -16,11 +16,11 @@
 
         - Operating system
         - Hostname
-        - CPU details and real-time usage
-        - GPU details
+        - CPU hardware details and real-time usage
+        - GPU hardware details
         - Kernel version
         - System uptime
-        - System load averages (over 1, 5, and 15 minutes)
+        - System load averages (over one, five, and 15 minutes)
         - Memory usage
         - Disk usage (defaults to `/home`, customizable via `-d`/`--disk`)
         - Currently logged-in users
@@ -29,14 +29,14 @@
     - Select exactly which service components to display and specify their order using service tokens (see `-s`/`--services` for details)
   
 - **Custom New Services**
-    - New system services can be added easily by creating a new service file, dropping it into the `src/services` folder: RCS will automatically detect and render it as a available new service
+    - New system services can be added easily by creating a new service file, dropping it into the `src/services` folder: RCS will automatically detect and render it as an available new service
 
 - **Visual Service Status Indicators**
-    - Color-coded tracking for CPU, memory, and disk utilization thresholds:
+    - Color-coded output for CPU, memory, and disk utilization thresholds:
 
-        - **Normal:** Green
-        - **Warning:** Yellow
-        - **Critical:** Red
+        - **Normal:** $\color{green}{\text{Green}}$
+        - **Warning:** $\color{yellow}{\text{Yellow}}$
+        - **Critical:** $\color{red}{\text{Red}}$
   
 - **Configuration-Free**
     - No complex dotfiles or external configurations to track down
@@ -97,7 +97,7 @@ This will result in the following output:
 
 Want to create a new service that doesn't yet exist in RCS?
 
-RCS leverages a **"zero-touch architecture"**, where every service is completely isolated within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a new service file and rebuild the project.
+RCS leverages a **"zero-touch architecture"**, where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
 
 To create a new RCS service:
 
@@ -168,5 +168,5 @@ Nice!
 RCS is designed to remain lean and fast, but some goals for upcoming releases include:
 
 - [x] Streamline modular service generation patterns (Zero-touch compilation)
-- [ ] Additional metric services (network interfaces, thermal sensors, etc.)
+- [ ] Additional metric services (network interfaces, thermal sensors... what else?)
 - [ ] Cross-platform compatibility expansion (macOS and Windows support profiles)

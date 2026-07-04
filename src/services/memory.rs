@@ -126,7 +126,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "RAMU",
             label: "Memory usage",
             description: "Memory usage % (Used/Total)",
-            sort_order: 8,
+            sort_order: 110,
         },
         Box::new(MemoryService),
     )

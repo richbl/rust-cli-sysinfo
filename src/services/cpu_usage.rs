@@ -118,7 +118,7 @@ pub fn descriptor(ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>)
             token: "CPUU",
             label: "CPU usage",
             description: "CPU usage %",
-            sort_order: 7,
+            sort_order: 100,
         },
         Box::new(CpuUsageService::new(ctx)),
     )

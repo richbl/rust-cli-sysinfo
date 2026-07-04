@@ -120,7 +120,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "GPU",
             label: "GPU(s)",
             description: "GPU model(s)",
-            sort_order: 3,
+            sort_order: 20,
         },
         Box::new(GpuService),
     )

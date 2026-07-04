@@ -106,7 +106,7 @@ pub fn descriptor(ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>)
             token: "DSKU",
             label: "Disk usage",
             description: "Disk usage % (Used/Total)",
-            sort_order: 9,
+            sort_order: 120,
         },
         Box::new(DiskService::new(ctx)),
     )

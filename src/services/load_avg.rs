@@ -57,7 +57,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "LOAD",
             label: "Load averages",
             description: "Load averages (1m, 5m, 15m)",
-            sort_order: 6,
+            sort_order: 90,
         },
         Box::new(LoadAvgService),
     )

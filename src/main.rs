@@ -36,11 +36,14 @@ fn render_labeled(registry: &ServiceRegistry, c: &Colors) {
         .max()
         .unwrap_or(4);
 
-    println!("\n{INDENT}{}{}{}\n{INDENT}{}{}", c.bold, c.cyan, APP_NAME, SEP, c.reset);
+    println!(
+        "\n{INDENT}{}{}{}\n{INDENT}{}{}",
+        c.bold, c.cyan, APP_NAME, SEP, c.reset
+    );
     println!(
         "{INDENT}To configure the services displayed, separate each service token with a\n{INDENT}hyphen (-) in the desired order.\n"
     );
-    println!("{INDENT}Available service tokens:\n");
+    println!("{INDENT}Available service tokens (default order):\n");
 
     for meta in registry.all_meta() {
         println!(

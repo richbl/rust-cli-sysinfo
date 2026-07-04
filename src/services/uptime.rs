@@ -46,7 +46,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "UPT",
             label: "Uptime",
             description: "System uptime",
-            sort_order: 5,
+            sort_order: 80,
         },
         Box::new(UptimeService),
     )

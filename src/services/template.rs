@@ -1,18 +1,3 @@
-//! TEMPLATE SERVICE — copy this file to add a new service to the utility
-//!
-//! Every `.rs` file dropped into `src/services` is discovered automatically by `build.rs` and
-//! wired into the binary at compile time. Nothing outside this file needs to change
-//!
-//!   1. Copy this file to `src/services/<your_service_name>.rs`
-//!   2. Rename `TemplateInfo` / `TemplateService` to match your service
-//!   3. Implement `collect()` to gather your data and `render()` to print it
-//!   4. Update the `ServiceMeta` fields in `descriptor()` below (token, label via
-//!      `indented_label!("Your label:")`, description, display order)
-//!   5. `cargo build` and that's it. Your service now appears in the default output, in
-//!      `-s <TOKEN>` selections, and in the `-s` reference table
-//!   6. Delete this comment block
-//!
-
 use super::prelude::*;
 
 /// `TemplateInfo` is the data your service collects. It can be anything — a `String`, numeric
@@ -49,15 +34,13 @@ impl Service for TemplateService {
         })
     }
 
-    /// `render()` formats and prints `data` to stdout via `print_row()`, which handles the
-    /// left-aligned label column
+    /// `render()` formats and returns `data` via a `RenderedRow`
     ///
-    /// Use `Threshold::Check { value, warn, crit }` instead of `Threshold::None` if your value
-    /// should be color-coded (see `memory.rs` or `disk.rs`)
-    ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        print_row(label, &data.message, &Threshold::None, c);
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: data.message.clone(),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -88,7 +71,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok()` asserts that the template service's `collect()` always succeeds —
     /// a real service's equivalent test would assert something meaningful about the data
@@ -104,8 +86,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = TemplateService.collect().unwrap();
-        TemplateService
-            .render("Template", &data, &Colors::new(false))
-            .unwrap();
+        TemplateService.render(&data).unwrap();
     }
 }

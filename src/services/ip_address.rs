@@ -54,10 +54,11 @@ impl Service for ActiveIpService {
 
     /// `render()` displays the active IP address
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        print_row(label, &data.address, &Threshold::None, c);
-
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: data.address.clone(),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -79,7 +80,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
     use std::net::IpAddr;
 
     /// `collect_returns_ok()` asserts that the `collect()` method returns a successful result
@@ -107,8 +107,6 @@ mod tests {
     fn render_does_not_panic() {
         let data = ActiveIpService.collect().unwrap();
 
-        ActiveIpService
-            .render("IP", &data, &Colors::new(false))
-            .unwrap();
+        ActiveIpService.render(&data).unwrap();
     }
 }

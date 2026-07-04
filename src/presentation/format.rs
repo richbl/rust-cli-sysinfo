@@ -10,6 +10,14 @@ pub enum Threshold {
     None,
     /// Apply color thresholds: yellow at `warn`, red at `crit`
     Check { value: f64, warn: f64, crit: f64 },
+    /// Render in red to indicate a service collection or rendering error
+    Error,
+}
+
+/// `RenderedRow` represents the display-ready output of a service's `render` call
+pub struct RenderedRow {
+    pub value: String,
+    pub threshold: Threshold,
 }
 
 /// `color_for_threshold()` selects the appropriate ANSI color string based on the threshold
@@ -21,6 +29,7 @@ pub fn color_for_threshold(threshold: &Threshold, c: &Colors) -> &'static str {
         Threshold::Check { value, warn, .. } if value >= warn => c.yellow,
         Threshold::Check { .. } => c.green,
         Threshold::None => c.reset,
+        Threshold::Error => c.red,
     }
 }
 
@@ -35,16 +44,6 @@ pub fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
     );
 }
 
-/// `print_row_error()` prints a left-aligned label/value row, coloring the value in red
-///
-pub fn print_row_error(label: &str, value: &str, c: &Colors) {
-    println!(
-        "{INDENT}{:<LABEL_WIDTH$} {}{value}{}",
-        format!("{label}:"),
-        c.red,
-        c.reset
-    );
-}
 /// `format_uptime()` formats a duration in seconds as `DDDd:HHh:MMm:SSs`
 ///
 #[must_use]
@@ -162,5 +161,13 @@ mod tests {
             crit: 90.0,
         };
         assert_eq!(color_for_threshold(&t, &c), c.red);
+    }
+
+    /// `color_for_threshold_error_returns_red()` asserts that `Error` returns the red color
+    ///
+    #[test]
+    fn color_for_threshold_error_returns_red() {
+        let c = Colors::new(true);
+        assert_eq!(color_for_threshold(&Threshold::Error, &c), c.red);
     }
 }

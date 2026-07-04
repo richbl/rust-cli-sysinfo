@@ -45,16 +45,15 @@ impl Service for CpuUsageService {
 
     /// `render()` renders CPU utilization with threshold-based color coding
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        let cpu_str = format!("{:.1}%", data.usage_pct);
-        let cpu_thresh = Threshold::Check {
-            value: data.usage_pct,
-            warn: CPU_WARN_PCT,
-            crit: CPU_CRIT_PCT,
-        };
-
-        print_row(label, &cpu_str, &cpu_thresh, c);
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: format!("{:.1}%", data.usage_pct),
+            threshold: Threshold::Check {
+                value: data.usage_pct,
+                warn: CPU_WARN_PCT,
+                crit: CPU_CRIT_PCT,
+            },
+        })
     }
 }
 

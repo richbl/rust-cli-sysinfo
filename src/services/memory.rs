@@ -95,7 +95,7 @@ impl Service for MemoryService {
     /// `render()` renders memory usage as a percentage with used/total in MB and threshold-based
     /// color coding
     ///
-    fn render(&self, label: &str, mem: &Self::Data, c: &Colors) -> Result<(), AppError> {
+    fn render(&self, mem: &Self::Data) -> Result<RenderedRow, AppError> {
         let mem_str = format!(
             "{:.1}% ({}M/{}M)",
             mem.pct,
@@ -103,17 +103,14 @@ impl Service for MemoryService {
             mem.total / 1024
         );
 
-        print_row(
-            label,
-            &mem_str,
-            &Threshold::Check {
+        Ok(RenderedRow {
+            value: mem_str,
+            threshold: Threshold::Check {
                 value: mem.pct,
                 warn: MEM_WARN_PCT,
                 crit: MEM_CRIT_PCT,
             },
-            c,
-        );
-        Ok(())
+        })
     }
 }
 

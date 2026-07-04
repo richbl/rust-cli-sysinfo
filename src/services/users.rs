@@ -47,14 +47,16 @@ impl Service for UsersService {
 
     /// `render()` renders the list of logged-in users as a comma-separated row
     ///
-    fn render(&self, label: &str, users: &Self::Data, c: &Colors) -> Result<(), AppError> {
+    fn render(&self, users: &Self::Data) -> Result<RenderedRow, AppError> {
         let user_str = if users.users.is_empty() {
             "Nobody".to_string()
         } else {
             users.users.join(", ")
         };
-        print_row(label, &user_str, &Threshold::None, c);
-        Ok(())
+        Ok(RenderedRow {
+            value: user_str,
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -77,7 +79,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok()` asserts that collecting logged-in users from `/var/run/utmp`
     /// returns `Ok`
@@ -93,6 +94,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = UsersService.collect().unwrap();
-        let _ = UsersService.render("User(s)", &data, &Colors::new(false));
+        let _ = UsersService.render(&data);
     }
 }

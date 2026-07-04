@@ -59,7 +59,7 @@ mod tests {
     use crate::core::erased::{CollectResult, ErasedService};
     use crate::core::error::AppError;
     use crate::core::meta::ServiceMeta;
-    use crate::presentation::colors::Colors;
+    use crate::presentation::format::{RenderedRow, Threshold};
     use std::any::Any;
 
     struct DummyService;
@@ -69,13 +69,11 @@ mod tests {
             Ok(Box::new(()))
         }
 
-        fn render_erased(
-            &self,
-            _label: &str,
-            _data: &(dyn Any + Send + Sync),
-            _colors: &Colors,
-        ) -> Result<(), AppError> {
-            Ok(())
+        fn render_erased(&self, _data: &(dyn Any + Send + Sync)) -> Result<RenderedRow, AppError> {
+            Ok(RenderedRow {
+                value: String::new(),
+                threshold: Threshold::None,
+            })
         }
     }
 

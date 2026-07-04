@@ -11,21 +11,12 @@ mod slot;
 use std::io::{self, Write};
 
 use crate::cli::Opts;
-use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, INDENT, SEP};
+use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, INDENT, LABEL_WIDTH, SEP_FALLBACK};
 use crate::core::context::ServiceContext;
 use crate::core::erased::CollectResult;
-use crate::core::error::AppError;
 use crate::core::registry::ServiceRegistry;
 use crate::presentation::colors::Colors;
-use crate::presentation::format::print_row_error;
-
-/// `render_service_error()` renders an error message for a single service
-///
-fn render_service_error(idx: usize, registry: &ServiceRegistry, error: &AppError, colors: &Colors) {
-    let label = registry.meta(idx).label;
-    let value = format!("n/a - {error}");
-    print_row_error(label, &value, colors);
-}
+use crate::presentation::format::{RenderedRow, Threshold, print_row};
 
 /// `render_labeled()` displays a list of available service tokens
 ///
@@ -38,7 +29,7 @@ fn render_labeled(registry: &ServiceRegistry, c: &Colors) {
 
     println!(
         "\n{INDENT}{}{}{}\n{INDENT}{}{}",
-        c.bold, c.cyan, APP_NAME, SEP, c.reset
+        c.bold, c.cyan, APP_NAME, SEP_FALLBACK, c.reset
     );
     println!(
         "{INDENT}To configure the services displayed, separate each service token with a\n{INDENT}hyphen (-) in the desired order.\n"
@@ -63,7 +54,7 @@ fn render_labeled(registry: &ServiceRegistry, c: &Colors) {
         c.reset,
     );
 
-    println!("{INDENT}{}{}{}{}", c.bold, c.cyan, SEP, c.reset);
+    println!("{INDENT}{}{}{}{}", c.bold, c.cyan, SEP_FALLBACK, c.reset);
 }
 
 /// `collect_services()` gathers data for each unique active service index
@@ -90,41 +81,61 @@ fn render_services(
     collected: &[(usize, CollectResult)],
     colors: &Colors,
 ) {
-    println!(
-        "{INDENT}{}{}{}\n{INDENT}{}{}",
-        colors.bold, colors.cyan, APP_NAME, SEP, colors.reset
-    );
-
-    // Render each unique active index
+    // Render all rows to intermediate memory structures to determine max width (for separator)
+    let mut active_rows = Vec::with_capacity(active.len());
     for &idx in active {
-        let Some((_, result)) = collected.iter().find(|(i, _)| *i == idx) else {
-            render_service_error(
-                idx,
-                registry,
-                &AppError::DataUnavailable("result not collected".into()),
-                colors,
-            );
-            continue;
+        let meta = registry.meta(idx);
+        let service = registry.service(idx);
+
+        let row = match collected.iter().find(|(i, _)| *i == idx) {
+            None => RenderedRow {
+                value: "n/a - result not collected".to_string(),
+                threshold: Threshold::Error,
+            },
+            Some((_, Err(e))) => RenderedRow {
+                value: format!("n/a - {e}"),
+                threshold: Threshold::Error,
+            },
+            Some((_, Ok(data))) => match service.render_erased(&**data) {
+                Err(e) => RenderedRow {
+                    value: format!("n/a - {e}"),
+                    threshold: Threshold::Error,
+                },
+                Ok(rendered_row) => rendered_row,
+            },
         };
 
-        match result {
-            Err(e) => render_service_error(idx, registry, e, colors),
-            Ok(data) => {
-                let service = registry.service(idx);
-                let label = registry.meta(idx).label;
-
-                // This only occurs if a real-time rendering failure occurs
-                if let Err(e) = service.render_erased(label, &**data, colors) {
-                    render_service_error(idx, registry, &e, colors);
-                }
-            }
-        }
+        active_rows.push((meta.label, row));
     }
 
-    println!("{INDENT}{}{}{}", colors.cyan, SEP, colors.reset);
+    // Measure the longest line across all rendered output rows (trimming margins/line breaks)
+    let max_value_len = active_rows
+        .iter()
+        .flat_map(|(_, row)| row.value.lines())
+        .map(|line| line.trim().len())
+        .max()
+        .unwrap_or(0);
+
+    // Dynamically assemble standard visual horizontal dividers
+    let sep_len = LABEL_WIDTH + 3 + max_value_len;
+    let dynamic_sep = "─".repeat(sep_len);
+
+    // Print structured table header
+    println!(
+        "{INDENT}{}{}{}\n{INDENT}{}{}",
+        colors.bold, colors.cyan, APP_NAME, dynamic_sep, colors.reset
+    );
+
+    // Output aligned and styled content cells
+    for (label, row) in active_rows {
+        print_row(label, &row.value, &row.threshold, colors);
+    }
+
+    // Print table footer
+    println!("{INDENT}{}{}{}", colors.cyan, dynamic_sep, colors.reset);
 }
 
-/// `main()` is the entry point for the utility (like... duh!)
+/// `main()` is the entry point for the utility
 ///
 fn main() {
     let opts = Opts::from_args();

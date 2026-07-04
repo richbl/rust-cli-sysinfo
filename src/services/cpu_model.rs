@@ -43,7 +43,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "CPU",
             label: "CPU",
             description: "CPU model",
-            sort_order: 2,
+            sort_order: 10,
         },
         Box::new(CpuModelService),
     )

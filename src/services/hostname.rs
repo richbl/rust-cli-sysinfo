@@ -37,7 +37,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "HST",
             label: "Hostname",
             description: "System hostname",
-            sort_order: 1,
+            sort_order: 60,
         },
         Box::new(HostnameService),
     )

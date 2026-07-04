@@ -67,7 +67,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "USR",
             label: "User(s)",
             description: "Current users",
-            sort_order: 10,
+            sort_order: 70,
         },
         Box::new(UsersService),
     )

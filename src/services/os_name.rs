@@ -41,7 +41,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "OS",
             label: "OS",
             description: "Operating system name and version",
-            sort_order: 0,
+            sort_order: 30,
         },
         Box::new(OsService),
     )

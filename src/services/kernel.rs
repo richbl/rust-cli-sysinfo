@@ -37,7 +37,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
             token: "KNL",
             label: "Kernel",
             description: "Linux kernel version",
-            sort_order: 4,
+            sort_order: 40,
         },
         Box::new(KernelService),
     )

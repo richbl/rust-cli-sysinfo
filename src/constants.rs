@@ -3,12 +3,12 @@ pub const APP_NAME: &str = "Rust-CLI-SysInfo";
 
 /// Indentation prefix applied to every output row and header line
 ///
-/// Change this single value to adjust the left-margin of all utility output.
+/// Change this value to adjust the starting indent of all utility outputs
 pub const INDENT: &str = "  ";
 
-/// Horizontal separator line used for visual sectioning
-pub const SEP: &str =
-    "───────────────────────────────────────────────────────────────────────────────────";
+/// Fallback horizontal separator line used for section separators in static contexts
+pub const SEP_FALLBACK: &str =
+    "──────────────────────────────────────────────────────────────────────────────────";
 
 /// Label width for left-aligned labels
 ///

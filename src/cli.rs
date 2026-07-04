@@ -1,7 +1,7 @@
 use std::io::{self, IsTerminal};
 use std::process;
 
-use crate::constants::{APP_NAME, SEP, VERSION};
+use crate::constants::{APP_NAME, SEP_FALLBACK, VERSION};
 use crate::core::registry::ServiceRegistry;
 use crate::presentation::colors::Colors;
 use crate::slot::{self, SlotFilter};
@@ -154,7 +154,7 @@ pub fn print_usage(c: &Colors) {
         c.bold,
         c.cyan,
         APP_NAME,
-        SEP,
+        SEP_FALLBACK,
         c.reset,
         env!("CARGO_PKG_NAME"),
         c.cyan,
@@ -162,7 +162,10 @@ pub fn print_usage(c: &Colors) {
         options_text,
     );
 
-    println!("  {}{}{}\n  v{}{}", c.bold, c.cyan, SEP, VERSION, c.reset);
+    println!(
+        "  {}{}{}\n  v{}{}",
+        c.bold, c.cyan, SEP_FALLBACK, VERSION, c.reset
+    );
 }
 
 /// `fail()` prints an error message with usage instructions and exits

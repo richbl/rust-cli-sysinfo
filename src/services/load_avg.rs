@@ -39,12 +39,12 @@ impl Service for LoadAvgService {
 
     /// `render()` renders load averages as a single row
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
         let (l1, l5, l15) = data.loadavg;
-        let load_str = format!("{l1:.2}, {l5:.2}, {l15:.2} (1m, 5m, 15m)");
-
-        print_row(label, &load_str, &Threshold::None, c);
-        Ok(())
+        Ok(RenderedRow {
+            value: format!("{l1:.2}, {l5:.2}, {l15:.2} (1m, 5m, 15m)"),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -67,7 +67,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok_with_some_loadavg()` asserts that load average collection succeeds and
     /// returns load averages on Linux
@@ -100,8 +99,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = LoadAvgService.collect().unwrap();
-        LoadAvgService
-            .render("Load Averages", &data, &Colors::new(false))
-            .unwrap();
+        LoadAvgService.render(&data).unwrap();
     }
 }

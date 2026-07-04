@@ -23,14 +23,11 @@ impl Service for CpuModelService {
 
     /// `render()` renders the CPU model name
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        print_row(
-            label,
-            data.model.as_deref().unwrap_or("Unknown"),
-            &Threshold::None,
-            c,
-        );
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: data.model.clone().unwrap_or_else(|| "Unknown".to_string()),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -53,7 +50,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok_on_linux()` asserts that CPU model collection succeeds on a Linux
     /// system
@@ -82,8 +78,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = CpuModelService.collect().unwrap();
-        CpuModelService
-            .render("CPU", &data, &Colors::new(false))
-            .unwrap();
+        CpuModelService.render(&data).unwrap();
     }
 }

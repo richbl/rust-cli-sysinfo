@@ -22,9 +22,11 @@ impl Service for HostnameService {
 
     /// `render()` renders the hostname
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        print_row(label, &data.hostname, &Threshold::None, c);
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: data.hostname.clone(),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -47,7 +49,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok_with_non_empty_hostname()` asserts that hostname collection succeeds
     /// and returns a non-empty hostname
@@ -69,9 +70,6 @@ mod tests {
     fn render_does_not_panic() {
         let data = HostnameService.collect().unwrap();
 
-        // render() writes to stdout; we just verify it does not panic
-        HostnameService
-            .render("Hostname", &data, &Colors::new(false))
-            .unwrap();
+        HostnameService.render(&data).unwrap();
     }
 }

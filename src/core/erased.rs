@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use crate::core::error::AppError;
-use crate::presentation::colors::Colors;
+use crate::presentation::format::RenderedRow;
 use crate::services::Service;
 
 /// Result of an [`ErasedService::collect`] call: the concrete `Service::Data`, type-erased
@@ -9,7 +9,7 @@ use crate::services::Service;
 pub type CollectResult = Result<Box<dyn Any + Send + Sync>, AppError>;
 
 /// `ErasedService` is an object-safe wrapper around [`Service`], letting services with different
-/// associated `Data` types live together in a single `Vec<Box<dyn ErasedService>>`.
+/// associated `Data` types live together in a single `Vec<Box<dyn ErasedService>>`
 pub trait ErasedService: Send + Sync {
     /// `collect_erased()` delegates to the wrapped service's [`Service::collect`], boxing the
     /// result
@@ -19,12 +19,7 @@ pub trait ErasedService: Send + Sync {
     /// `render_erased()` downcasts `data` back to the wrapped service's concrete `Data` type and
     /// delegates to [`Service::render`]
     ///
-    fn render_erased(
-        &self,
-        label: &str,
-        data: &(dyn Any + Send + Sync),
-        colors: &Colors,
-    ) -> Result<(), AppError>;
+    fn render_erased(&self, data: &(dyn Any + Send + Sync)) -> Result<RenderedRow, AppError>;
 }
 
 impl<T> ErasedService for T
@@ -36,17 +31,12 @@ where
         Service::collect(self).map(|data| Box::new(data) as Box<dyn Any + Send + Sync>)
     }
 
-    fn render_erased(
-        &self,
-        label: &str,
-        data: &(dyn Any + Send + Sync),
-        colors: &Colors,
-    ) -> Result<(), AppError> {
+    fn render_erased(&self, data: &(dyn Any + Send + Sync)) -> Result<RenderedRow, AppError> {
         let data = data.downcast_ref::<T::Data>().expect(
             "ErasedService: collect_erased()/render_erased() type mismatch for the same \
              concrete service — this would indicate a bug in the blanket impl itself, not in \
              any service file",
         );
-        Service::render(self, label, data, colors)
+        Service::render(self, data)
     }
 }

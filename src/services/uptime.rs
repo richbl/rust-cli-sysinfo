@@ -30,10 +30,11 @@ impl Service for UptimeService {
 
     /// `render()` renders system uptime formatted as `DDDd:HHh:MMm:SSs`
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        let uptime_str = format_uptime(data.uptime_secs);
-        print_row(label, &uptime_str, &Threshold::None, c);
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: format_uptime(data.uptime_secs),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -56,7 +57,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok_with_some_uptime()` asserts that uptime collection succeeds and returns
     /// uptime value on Linux
@@ -88,8 +88,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = UptimeService.collect().unwrap();
-        UptimeService
-            .render("Uptime", &data, &Colors::new(false))
-            .unwrap();
+        UptimeService.render(&data).unwrap();
     }
 }

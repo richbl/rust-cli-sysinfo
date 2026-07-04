@@ -26,9 +26,11 @@ impl Service for OsService {
 
     /// `render()` renders the OS name
     ///
-    fn render(&self, label: &str, data: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        print_row(label, &data.name, &Threshold::None, c);
-        Ok(())
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError> {
+        Ok(RenderedRow {
+            value: data.name.clone(),
+            threshold: Threshold::None,
+        })
     }
 }
 
@@ -51,7 +53,6 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 #[cfg(target_os = "linux")]
 mod tests {
     use super::*;
-    use crate::presentation::colors::Colors;
 
     /// `collect_returns_ok_with_non_empty_name()` asserts that OS name collection succeeds and
     /// returns a non-empty name
@@ -68,6 +69,6 @@ mod tests {
     #[test]
     fn render_does_not_panic() {
         let data = OsService.collect().unwrap();
-        OsService.render("OS", &data, &Colors::new(false)).unwrap();
+        OsService.render(&data).unwrap();
     }
 }

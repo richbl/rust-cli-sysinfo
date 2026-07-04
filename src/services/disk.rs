@@ -70,8 +70,8 @@ impl Service for DiskService {
 
     /// `render()` renders disk usage as a percentage with used/total sizes
     ///
-    fn render(&self, label: &str, disk: &Self::Data, c: &Colors) -> Result<(), AppError> {
-        let (disk_str, disk_thresh) = if disk.total_kb == 0 {
+    fn render(&self, disk: &Self::Data) -> Result<RenderedRow, AppError> {
+        let (value, threshold) = if disk.total_kb == 0 {
             ("n/a".to_string(), Threshold::None)
         } else {
             // display() handles formatting potential non-UTF-8 characters
@@ -92,8 +92,7 @@ impl Service for DiskService {
             )
         };
 
-        print_row(label, &disk_str, &disk_thresh, c);
-        Ok(())
+        Ok(RenderedRow { value, threshold })
     }
 }
 

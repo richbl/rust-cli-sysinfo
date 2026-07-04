@@ -2,11 +2,12 @@
 // `build.rs` from a directory listing of `src/services`
 //
 //Nothing in this file — or anywhere else in the crate — needs to change when a service is added,
-// renamed, or removed; the next build simply picks up the new file via the generated `include!` below
+// renamed, or removed: the next build simply picks up the new file via the generated `include!`
+// statement below
 include!(concat!(env!("OUT_DIR"), "/services_gen.rs"));
 
+use crate::RenderedRow;
 use crate::core::error::AppError;
-use crate::presentation::colors::Colors;
 
 /// `prelude` re-exports the types shared across all service modules, eliminating duplicate
 /// `use` statements in each service file
@@ -20,8 +21,7 @@ pub mod prelude {
     pub use crate::core::erased::ErasedService;
     pub use crate::core::error::AppError;
     pub use crate::core::meta::ServiceMeta;
-    pub use crate::presentation::colors::Colors;
-    pub use crate::presentation::format::{Threshold, print_row};
+    pub use crate::presentation::format::{RenderedRow, Threshold};
 }
 
 /// `Service` is the common interface implemented by every system information service
@@ -32,7 +32,7 @@ pub trait Service {
     ///
     fn collect(&self) -> Result<Self::Data, AppError>;
 
-    /// `render()` formats and prints `data` to stdout, propagating any formatting or output errors
+    /// `render()` formats and returns raw `data` into a display-ready `RenderedRow`
     ///
-    fn render(&self, label: &str, data: &Self::Data, colors: &Colors) -> Result<(), AppError>;
+    fn render(&self, data: &Self::Data) -> Result<RenderedRow, AppError>;
 }

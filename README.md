@@ -13,17 +13,18 @@
 
 - **Comprehensive System Status**
     - Displays system diagnostics right out of the box:
-
-        - Operating system
-        - Hostname
+ 
         - CPU hardware details and real-time usage
         - GPU hardware details
+        - Operating system
         - Kernel version
+        - IP address
+        - Hostname
+        - Currently logged-in user(s)
         - System uptime
         - System load averages (over one, five, and 15 minutes)
         - Memory usage
         - Disk usage (defaults to `/home`, customizable via `-d`/`--disk`)
-        - Currently logged-in users
 
 - **Customizable Services Layout**
     - Select exactly which service components to display and specify their order using service tokens (see `-s`/`--services` for details)

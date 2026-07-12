@@ -4,7 +4,7 @@ use crate::core::error::AppError;
 use crate::presentation::format::RenderedRow;
 use crate::services::Service;
 
-/// Result of an [`ErasedService::collect`] call: the concrete `Service::Data`, type-erased
+/// Result of an [`ErasedService::collect_erased`] call: the concrete `Service::Data`, type-erased
 /// behind `Any` so services with different `Data` types can share one collection
 pub type CollectResult = Result<Box<dyn Any + Send + Sync>, AppError>;
 

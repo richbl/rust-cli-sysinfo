@@ -12,7 +12,7 @@ pub struct ServiceRegistry {
 
 impl ServiceRegistry {
     /// `new()` builds one entry per service discovered under `src/services` at compile time,
-    /// then sorts entries by their declared [`ServiceMeta::order`] for a default display order
+    /// then sorts entries by their declared [`ServiceMeta::sort_order`] for a default display order
     /// (tie-breakers are resolved by the `build.rs`'s discovery order)
     ///
     #[must_use]

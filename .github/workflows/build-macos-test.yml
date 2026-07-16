@@ -1,4 +1,4 @@
-name: Build macOS test binary
+name: Build macOS (Intel) Test Binary
 
 on:
   workflow_dispatch:
@@ -7,33 +7,31 @@ permissions:
   contents: read
 
 jobs:
-  build-macos-arm64:
-    name: Build macOS Apple Silicon binary
-    runs-on: macos-latest
+  build-macos-intel:
+    name: Build macOS Intel Binary
+    runs-on: macos-13
 
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c
         with:
           toolchain: stable
-          targets: aarch64-apple-darwin
+
+      - name: Show toolchain information
+        run: |
+          rustc --version
+          cargo --version
+          rustup show
 
       - name: Build release binary
-        run: cargo build --release --target aarch64-apple-darwin
-
-      - name: Package binary
-        run: |
-          mkdir -p dist
-          cp target/aarch64-apple-darwin/release/rust-cli-sysinfo dist/
-          cd dist
-          zip -r rust-cli-sysinfo-macos-arm64.zip rust-cli-sysinfo
+        run: cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: rust-cli-sysinfo-macos-arm64
-          path: dist/rust-cli-sysinfo-macos-arm64.zip
+          name: rust-cli-sysinfo-macos-intel
+          path: target/release/rust-cli-sysinfo
           retention-days: 14

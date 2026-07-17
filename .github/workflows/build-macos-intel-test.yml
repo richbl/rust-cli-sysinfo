@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  build-macos-arm64:
+  build-macos-x86-64:
     name: Build macOS Apple Silicon binary
     runs-on: macos-latest
 
@@ -29,11 +29,11 @@ jobs:
           mkdir -p dist
           cp target/x86_64-apple-darwin/release/rust-cli-sysinfo dist/
           cd dist
-          zip -r rust-cli-sysinfo-macos-arm64.zip rust-cli-sysinfo
+          zip -r rust-cli-sysinfo-macos-x86-64.zip rust-cli-sysinfo
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: rust-cli-sysinfo-macos-arm64
-          path: dist/rust-cli-sysinfo-macos-arm64.zip
+          name: rust-cli-sysinfo-macos-x86-64
+          path: dist/rust-cli-sysinfo-macos-x86-64.zip
           retention-days: 14

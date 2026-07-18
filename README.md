@@ -181,25 +181,23 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
       | **RCS**        |            |          **Platform**          |                                 |                                 |
       |--------------- |----------- |:-----------------------------: |:------------------------------: |:------------------------------: |
       | **Service**    | **Token**  |           **Linux**            |           **Windows**           |             **Mac**             |
-      | CPU            | CPU        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | GPU(s)         | GPU        |  $\color{green}{\huge\circledast}$ |   $\color{red}{\huge\circledast}$   |   $\color{red}{\huge\circledast}$   |
-      | OS             | OS         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Kernel         | KNL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | IP Address     | IP         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Hostname       | HST        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | User(s)        | USR        | $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Uptime         | UPT        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$  |               n/a               | $\color{yellow}{\huge\circledast}$  |
-      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
-      | Template       | TPL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | CPU            | CPU        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | GPU(s)         | GPU        |  $\color{green}{\huge\circledast}$ |   $\color{yellow}{\huge\circledast}$   |   $\color{yellow}{\huge\circledast}$   |
+      | OS             | OS         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Kernel         | KNL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | IP Address     | IP         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Hostname       | HST        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | User(s)        | USR        | $\color{green}{\huge\circledast}$  | $\color{red}{\huge\circledast}$  | $\color{red}{\huge\circledast}$  |
+      | Uptime         | UPT        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$  |               n/a               | $\color{green}{\huge\circledast}$  |
+      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Template       | TPL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
 
   Compatibility Notes:
-    - The GPU service is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
+    - The GPU service (GPU) is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
 
-    - The Load Average service is not available on Windows, as the concept of load averages is not applicable to that platform
+    - The Load Average service (LOAD) is not available on Windows, as the concept of load averages is not applicable to that platform
 
-    - As well, the User(s) service is not yet implemented on Windows, as the concept of actively "logged-in" users is not applicable to that platform
-
-    - Only limited testing has been done on the MacOS platform. If you're a Mac user and would like to help test RCS on that platform, please reach out to me. Thanks!
+    - As well, the User(s) service (USR) is not yet implemented on Windows and MacOS, as a cross-platform solution for identifying actively "logged-in" users has not yet been identified

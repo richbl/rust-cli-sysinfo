@@ -1,7 +1,6 @@
 use super::prelude::*;
-use crate::core::utils::find_key_value;
 
-/// `CpuModelInfo` parsed from `/proc/cpuinfo`
+/// `CpuModelInfo` contains the CPU model/brand string
 #[derive(Default)]
 pub struct CpuModelInfo {
     pub model: Option<String>,
@@ -14,10 +13,14 @@ pub struct CpuModelService;
 impl Service for CpuModelService {
     type Data = CpuModelInfo;
 
-    /// `collect()` reads the first `model name` entry from `/proc/cpuinfo`
+    /// `collect()` creates a fresh, minimal `sysinfo::System`, refreshes CPU info, and reads the
+    /// brand string off the first logical CPU
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let model = find_key_value("/proc/cpuinfo", "model name", ':')?;
+        let mut sys = sysinfo::System::new();
+        sys.refresh_cpu_all();
+
+        let model = sys.cpus().first().map(|cpu| cpu.brand().to_string());
         Ok(CpuModelInfo { model })
     }
 
@@ -47,15 +50,15 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 mod tests {
     use super::*;
 
-    /// `collect_returns_ok_on_linux()` asserts that CPU model collection succeeds on a Linux
-    /// system
+    /// `collect_returns_ok_on_supported_os()` asserts that CPU model collection succeeds on a
+    /// supported system
     ///
     #[test]
-    fn collect_returns_ok_on_linux() {
+    fn collect_returns_ok_on_supported_os() {
         let result = CpuModelService.collect();
         assert!(result.is_ok());
     }
@@ -68,7 +71,7 @@ mod tests {
         let data = CpuModelService.collect().unwrap();
         assert!(
             data.model.is_some(),
-            "model name must be present on a CPU-bearing Linux system"
+            "model name must be present on a CPU-driven system"
         );
         assert!(!data.model.unwrap().is_empty());
     }

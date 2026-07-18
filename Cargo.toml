@@ -1,16 +1,22 @@
 [package]
   name = "rust-cli-sysinfo"
-  version = "0.9.0"
+  version = "0.10.0"
   edition = "2024"
   build = "build.rs"
 
 [dependencies]
   lexopt = "0.3.2"
-  pci-ids = "0.2.6"
   libc = "0.2"
-  rustix = { version = "1", features = ["fs"] }
-  thiserror = "2"                               # error handling
-  utwt = "0.4"                                  # parse active users
+
+  # NOTE: sysinfo's native cross-platform GPU support (see services/gpu.rs) is merged on the
+  # crate's `main` branch but not yet in a published release
+  sysinfo = { version = "0.39", features = ["disk"] }
+  local-ip-address = "0.6"
+  thiserror = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+  utwt = "0.4"      # parse active/logged-in users
+  pci-ids = "0.2.6" # GPU vendor/model lookup
 
 [dev-dependencies]
   tempfile = "3"

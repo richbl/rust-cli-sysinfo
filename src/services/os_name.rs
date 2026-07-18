@@ -1,7 +1,6 @@
 use super::prelude::*;
-use crate::core::utils::find_key_value;
 
-/// `OsInfo` contains the OS name parsed from `/etc/os-release`
+/// `OsInfo` contains a human-readable OS name/version string
 pub struct OsInfo {
     pub name: String,
 }
@@ -13,13 +12,18 @@ pub struct OsService;
 impl Service for OsService {
     type Data = OsInfo;
 
-    /// `collect()` reads `PRETTY_NAME` from `/etc/os-release`
+    /// `collect()` returns the OS name and version, or "Unknown OS" if it cannot be determined
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let name = find_key_value("/etc/os-release", "PRETTY_NAME", '=')?.map_or_else(
-            || "Unknown Linux".into(),
-            |val| val.trim_matches('"').to_string(),
-        );
+        let name = sysinfo::System::long_os_version()
+            .or_else(|| {
+                let name = sysinfo::System::name()?;
+                Some(match sysinfo::System::os_version() {
+                    Some(version) => format!("{name} {version}"),
+                    None => name,
+                })
+            })
+            .unwrap_or_else(|| "Unknown OS".to_string());
 
         Ok(OsInfo { name })
     }
@@ -50,7 +54,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 mod tests {
     use super::*;
 

@@ -8,7 +8,10 @@ pub const INDENT: &str = "  ";
 
 /// Fallback horizontal separator line used for section separators in static contexts
 pub const SEP_FALLBACK: &str =
-    "──────────────────────────────────────────────────────────────────────────────────";
+    "───────────────────────────────────────────────────────────────────────────────────────";
+
+#[cfg(not(target_os = "linux"))]
+pub const NOT_YET_IMPLEMENTED: &str = "This service is not yet implemented on this platform";
 
 /// Label width for left-aligned labels
 ///

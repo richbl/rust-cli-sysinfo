@@ -1,15 +1,19 @@
-use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+#[cfg(target_os = "linux")]
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
-use pci_ids::{Device, FromId, Vendor};
+#[cfg(not(target_os = "linux"))]
+use crate::constants::NOT_YET_IMPLEMENTED;
 
 use super::prelude::*;
 use crate::constants::{INDENT, LABEL_WIDTH};
 use crate::core::error::AppError;
-use crate::core::utils::read_hex_u16;
 
-/// Deduplicated list of GPU display names discovered via `/sys/class/drm`
+/// Deduplicated list of GPU display names
+///
 pub struct GpuInfo {
     pub models: Vec<String>,
 }
@@ -20,7 +24,7 @@ pub struct GpuService;
 impl Service for GpuService {
     type Data = GpuInfo;
 
-    /// `collect()` scans `/sys/class/drm` and resolves vendor/device PCI IDs into display names
+    /// `collect()` delegates to the platform-specific implementation below
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         Ok(GpuInfo {
@@ -45,7 +49,9 @@ impl Service for GpuService {
 }
 
 /// `collect_gpu_models()` discovers GPU display names by scanning `/sys/class/drm` card entries
+/// and resolving vendor/device PCI IDs into display names
 ///
+#[cfg(target_os = "linux")]
 fn collect_gpu_models() -> Result<Vec<String>, AppError> {
     let mut seen_paths: HashSet<PathBuf> = HashSet::new();
     let mut names = Vec::new();
@@ -84,7 +90,11 @@ fn collect_gpu_models() -> Result<Vec<String>, AppError> {
 /// `gpu_name_from_card()` resolves a GPU display name from a DRM card path via PCI vendor/device
 /// IDs
 ///
+#[cfg(target_os = "linux")]
 fn gpu_name_from_card(card_path: &Path) -> Result<Option<String>, AppError> {
+    use crate::core::utils::read_hex_u16;
+    use pci_ids::{Device, FromId, Vendor};
+
     let device_path = card_path.join("device");
 
     // Read vendor ID, skipping the card gracefully if the file is missing/inaccessible
@@ -111,6 +121,17 @@ fn gpu_name_from_card(card_path: &Path) -> Result<Option<String>, AppError> {
     );
 
     Ok(Some(name))
+}
+
+/// `collect_gpu_models()` — non-Linux fallback
+///
+/// `sysinfo`'s native GPU support (Linux/macOS/Windows) isn't in a published release yet,
+/// so rather than leaving Windows/macOS silently rendering, this surfaces as an explicit
+/// collection error
+///
+#[cfg(not(target_os = "linux"))]
+fn collect_gpu_models() -> Result<Vec<String>, AppError> {
+    Err(AppError::DataUnavailable(NOT_YET_IMPLEMENTED.into()))
 }
 
 /// `descriptor()` is this service's registration point, discovered automatically by

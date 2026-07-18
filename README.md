@@ -1,10 +1,12 @@
 # Rust CLI Sysinfo (RCS)
 
+<!-- markdownlint-disable MD033 -->
 <a href="https://github.com/richbl/rust-cli-sysinfo/releases"><img align="middle" alt="Release" src="https://badgen.net/github/tag/richbl/rust-cli-sysinfo?icon=github&label=release"></a>
 <a href="https://github.com/richbl/rust-cli-sysinfo/pulls?q="><img align="middle" alt="Link to PRs" src="https://badgen.net/github/last-commit/richbl/rust-cli-sysinfo?color=blue&icon=github"></a>
 <a href="https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo"><img align="middle" alt="Rust Report Card" src="https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo"></a>
 <a href="https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img align="middle" alt="Codacy Badge" src="https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623"></a>
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo"><img align="middle" width="85" alt="Gitberg logo" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/gitberg_logo.png"></a>
+<!-- markdownlint-enable MD033 -->
 
 **Rust-CLI-Sysinfo** (RCS) is a lightweight, modular Rust utility for the Linux terminal that displays the status of customizable system services
 
@@ -12,7 +14,6 @@
 
 - **Comprehensive System Status**
     - Displays system diagnostics right out of the box:
- 
         - CPU hardware details and real-time usage
         - GPU hardware details
         - Operating system
@@ -168,5 +169,37 @@ Nice!
 RCS is designed to remain lean and fast, but some goals for upcoming releases include:
 
 - [x] Streamline modular service generation patterns (Zero-touch compilation)
-- [ ] Additional metric services (network interfaces, thermal sensors... what else?)
-- [ ] Cross-platform compatibility expansion (macOS and Windows support profiles)
+
+- [-] Additional metric services:
+    - Network interfaces (IP address added in v0.9.0)
+    - Thermal sensor(s)
+    - What else?
+
+- [-] Cross-platform compatibility expansion (macOS and Windows support profiles)
+    - Currently in progress, with a focus on utilizing the most appropriate cross-platform Rust crates for each supported service:
+
+      | **RCS**        |            |          **Platform**          |                                 |                                 |
+      |--------------- |----------- |:-----------------------------: |:------------------------------: |:------------------------------: |
+      | **Service**    | **Token**  |           **Linux**            |           **Windows**           |             **Mac**             |
+      | CPU            | CPU        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | GPU(s)         | GPU        |  $\color{green}{\huge\bullet}$ |   $\color{red}{\huge\bullet}$   |   $\color{red}{\huge\bullet}$   |
+      | OS             | OS         | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Kernel         | KNL        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | IP Address     | IP         | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Hostname       | HST        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | User(s)        | USR        | $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Uptime         | UPT        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Load Averages  | LOAD       | $\color{green}{\huge\bullet}$  |               n/a               | $\color{yellow}{\huge\bullet}$  |
+      | CPU Usage      | CPUU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Memory Usage   | RAMU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Disk Usage     | DSKU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | Template       | TPL        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+
+  Compatibility Notes:
+    - The GPU service is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
+
+    - The Load Average service is not available on Windows, as the concept of load averages is not applicable to that platform
+
+    - As well, the User(s) service is not yet implemented on Windows, as the concept of actively "logged-in" users is not applicable to that platform
+
+    - Only limited testing has been done on the MacOS platform. If you're a Mac user and would like to help test RCS on that platform, please reach out to me. Thanks!

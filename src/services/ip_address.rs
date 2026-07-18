@@ -1,55 +1,28 @@
 use super::prelude::*;
-use std::net::UdpSocket;
 
-/// `ActiveIpInfo` contains the primary IP address currently selected by the OS
-/// routing table for outbound traffic
+/// `ActiveIpInfo` contains the primary local IP address currently assigned to this host
 #[derive(Default)]
 pub struct ActiveIpInfo {
     pub address: String,
 }
 
-/// Per RFC 5737/3849, the values of`IP4_ADDR` and `IP6_ADDR` are used to determine the active
-/// IP address by connecting a UDP socket to a known public address (no packets are sent)
-const IP4_ADDR: &str = "1.1.1.1:80";
-const IP6_ADDR: &str = "[2606:4700:4700::1111]:80";
-
 /// `ActiveIpService` collects the active local IP address
 pub struct ActiveIpService;
-
-/// `active_ip()` attempts to determine the outbound IPv4 or IPv6 address
-///
-fn active_ip() -> Result<String, AppError> {
-    // Try IPv4 first
-    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0")
-        && socket.connect(IP4_ADDR).is_ok()
-        && let Ok(addr) = socket.local_addr()
-    {
-        return Ok(addr.ip().to_string());
-    }
-
-    // Fall back to IPv6
-    if let Ok(socket) = UdpSocket::bind("[::]:0")
-        && socket.connect(IP6_ADDR).is_ok()
-        && let Ok(addr) = socket.local_addr()
-    {
-        return Ok(addr.ip().to_string());
-    }
-
-    // Give up...
-    Err(AppError::DataUnavailable(
-        "Unable to determine active IP address".into(),
-    ))
-}
 
 impl Service for ActiveIpService {
     type Data = ActiveIpInfo;
 
-    /// `collect()` attempts to determine the active IP address by connecting a UDP socket to a known public address
+    /// `collect()` resolves the active local IP address
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        Ok(ActiveIpInfo {
-            address: active_ip()?,
-        })
+        let address = local_ip_address::local_ip()
+            .map(|ip| ip.to_string())
+            .or_else(|_| local_ip_address::local_ipv6().map(|ip| ip.to_string()))
+            .map_err(|e| {
+                AppError::DataUnavailable(format!("unable to determine active IP address: {e}"))
+            })?;
+
+        Ok(ActiveIpInfo { address })
     }
 
     /// `render()` displays the active IP address

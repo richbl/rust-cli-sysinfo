@@ -1,8 +1,7 @@
 use super::prelude::*;
-use crate::core::utils::read_first_line;
 use crate::presentation::format::format_uptime;
 
-/// `UptimeInfo` contains the system uptime in seconds read from `/proc/uptime`
+/// `UptimeInfo` contains the system uptime in seconds
 pub struct UptimeInfo {
     pub uptime_secs: u64,
 }
@@ -14,18 +13,12 @@ pub struct UptimeService;
 impl Service for UptimeService {
     type Data = UptimeInfo;
 
-    /// `collect()` reads the uptime in seconds from `/proc/uptime`
+    /// `collect()` reads system uptime in seconds
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let raw = read_first_line("/proc/uptime")?;
-        let uptime_secs = raw
-            .split_whitespace()
-            .next()
-            .and_then(|s| s.split('.').next())
-            .and_then(|s| s.parse().ok())
-            .ok_or_else(|| AppError::DataUnavailable("failed to parse uptime".into()))?;
-
-        Ok(UptimeInfo { uptime_secs })
+        Ok(UptimeInfo {
+            uptime_secs: sysinfo::System::uptime(),
+        })
     }
 
     /// `render()` renders system uptime formatted as `DDDd:HHh:MMm:SSs`
@@ -54,12 +47,12 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 mod tests {
     use super::*;
 
-    /// `collect_returns_ok_with_some_uptime()` asserts that uptime collection succeeds and returns
-    /// uptime value on Linux
+    /// `collect_returns_ok_with_some_uptime()` asserts that uptime collection succeeds and
+    /// returns a positive value on a running system
     ///
     #[test]
     fn collect_returns_ok_with_some_uptime() {

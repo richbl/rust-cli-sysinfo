@@ -1,6 +1,12 @@
 use super::prelude::*;
 
-/// `UsersInfo` contains the list of logged-in users collected from `/var/run/utmp`
+#[cfg(not(target_os = "linux"))]
+use crate::constants::NOT_YET_IMPLEMENTED;
+
+/// `UsersInfo` contains the list of logged-in users (Linux only, via `/var/run/utmp`)
+/// Currently unclear how to implement this on Windows or macOS, as the concept is not
+/// cross-platform
+///
 #[derive(Default)]
 pub struct UsersInfo {
     pub users: Vec<String>,
@@ -13,36 +19,10 @@ pub struct UsersService;
 impl Service for UsersService {
     type Data = UsersInfo;
 
-    /// `collect()` reads the list of logged-in users from `/var/run/utmp` via `utwt`
+    /// `collect()` delegates to the platform-specific implementation below
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        // parse_utmp() resolves the platform path internally
-        let entries = match utwt::parse_utmp() {
-            Ok(e) => e,
-            Err(utwt::ParseError::Io(io_err))
-                if matches!(
-                    io_err.kind(),
-                    std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
-                ) =>
-            {
-                // Oh no! `utmp` absent or permission denied? --> degrade gracefully
-                return Ok(UsersInfo::default());
-            }
-            Err(e) => return Err(AppError::from(e)),
-        };
-
-        let mut users: Vec<String> = entries
-            .into_iter()
-            .filter_map(|entry| match entry {
-                // user: String is a named field inside UserProcess — no method call needed
-                utwt::UtmpEntry::UserProcess { user, .. } if !user.is_empty() => Some(user),
-                _ => None,
-            })
-            .collect();
-
-        users.sort_unstable();
-        users.dedup();
-        Ok(UsersInfo { users })
+        collect_users()
     }
 
     /// `render()` renders the list of logged-in users as a comma-separated row
@@ -58,6 +38,45 @@ impl Service for UsersService {
             threshold: Threshold::None,
         })
     }
+}
+
+/// `collect_users()` reads the list of logged-in users
+///
+#[cfg(target_os = "linux")]
+fn collect_users() -> Result<UsersInfo, AppError> {
+    let entries = match utwt::parse_utmp() {
+        Ok(e) => e,
+        Err(utwt::ParseError::Io(io_err))
+            if matches!(
+                io_err.kind(),
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
+            ) =>
+        {
+            // Oh no! `utmp` absent or permission denied? --> degrade gracefully
+            return Ok(UsersInfo::default());
+        }
+        Err(e) => return Err(AppError::from(e)),
+    };
+
+    let mut users: Vec<String> = entries
+        .into_iter()
+        .filter_map(|entry| match entry {
+            // user: String is a named field inside UserProcess — no method call needed
+            utwt::UtmpEntry::UserProcess { user, .. } if !user.is_empty() => Some(user),
+            _ => None,
+        })
+        .collect();
+
+    users.sort_unstable();
+    users.dedup();
+    Ok(UsersInfo { users })
+}
+
+/// `collect_users()` — the non-Linux fallback message...
+///
+#[cfg(not(target_os = "linux"))]
+fn collect_users() -> Result<UsersInfo, AppError> {
+    Err(AppError::DataUnavailable(NOT_YET_IMPLEMENTED.into()))
 }
 
 /// `descriptor()` is this service's registration point, discovered automatically by

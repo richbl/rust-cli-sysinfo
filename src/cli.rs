@@ -1,8 +1,9 @@
 use std::io::{self, IsTerminal};
 use std::process;
 
-use crate::constants::{APP_NAME, SEP_FALLBACK, VERSION};
+use crate::constants::{SEP_FALLBACK, VERSION};
 use crate::core::registry::ServiceRegistry;
+use crate::core::utils::generate_title;
 use crate::presentation::colors::Colors;
 use crate::slot::{self, SlotFilter};
 
@@ -15,6 +16,16 @@ pub struct Opts {
     pub slot_filter: SlotFilter, // Service selection and ordering
 }
 
+/// `default_disk_mount()` returns a platform-appropriate default path for `-d/--disk`
+///
+fn default_disk_mount() -> String {
+    if cfg!(windows) {
+        "C:\\".to_string()
+    } else {
+        "/home".to_string()
+    }
+}
+
 /// `Opts` implements the command-line options parser
 impl Opts {
     /// `from_args()` parses `argv` into [`Opts`], printing usage and exiting on any error
@@ -22,7 +33,7 @@ impl Opts {
     pub fn from_args() -> Self {
         let mut clear = true;
         let mut color = io::stdout().is_terminal();
-        let mut disk_mount = "/home".to_string();
+        let mut disk_mount = default_disk_mount();
         let mut cpu_sample_ms = 250_u64;
         let mut slot_filter = SlotFilter::Default;
 
@@ -140,7 +151,7 @@ pub fn print_usage(c: &Colors) {
     {cyan}-s, --services [TOKENS]{reset}     Select and order available services: 
                                   Run -s with no arguments to see available tokens
 
-    {cyan}-d, --disk <path>{reset}           Disk mount to report disk usage [default: /home]
+    {cyan}-d, --disk <path>{reset}           Disk mount to report disk usage [default: /home or C:\\]
     {cyan}-c, --cpu-sample-rate <ms>{reset}  CPU sampling window in milliseconds [default: 250]
     {cyan}-n, --no-clear{reset}              Skip clearing the terminal before output
     {cyan}-o, --no-color{reset}              Disable ANSI color output
@@ -150,11 +161,10 @@ pub fn print_usage(c: &Colors) {
     );
 
     println!(
-        "\n  {}{}{}\n  {}{}\n  Usage: {} {}[OPTIONS]{}\n\n{}",
+        "\n  {}{}{}\n  {}\n  Usage: {} {}[OPTIONS]{}\n\n{}\n",
         c.bold,
         c.cyan,
-        APP_NAME,
-        SEP_FALLBACK,
+        generate_title(SEP_FALLBACK.chars().count()),
         c.reset,
         env!("CARGO_PKG_NAME"),
         c.cyan,

@@ -1,7 +1,10 @@
 use super::prelude::*;
-use crate::core::utils::read_first_line;
 
-/// `LoadAvgInfo` contains the system load averages parsed from `/proc/loadavg`
+/// `LoadAvgInfo` contains the system load averages
+///
+/// Note that this concept is only applicable to Unix-like systems; on Windows, this service will
+/// return an explicit error
+///
 pub struct LoadAvgInfo {
     pub loadavg: (f64, f64, f64),
 }
@@ -13,28 +16,23 @@ pub struct LoadAvgService;
 impl Service for LoadAvgService {
     type Data = LoadAvgInfo;
 
-    /// `collect()` reads the 1m, 5m, and 15m load averages from `/proc/loadavg`
+    /// `collect()` reads the 1m, 5m, and 15m load averages
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let line = read_first_line("/proc/loadavg")?;
-        let mut parts = line.split_whitespace();
+        #[cfg(windows)]
+        {
+            return Err(AppError::DataUnavailable(
+                "This service has no equivalent on this platform".into(),
+            ));
+        }
 
-        let l1 = parts
-            .next()
-            .and_then(|v| v.parse().ok())
-            .ok_or_else(|| AppError::DataUnavailable("failed to parse 1m loadavg".into()))?;
-        let l5 = parts
-            .next()
-            .and_then(|v| v.parse().ok())
-            .ok_or_else(|| AppError::DataUnavailable("failed to parse 5m loadavg".into()))?;
-        let l15 = parts
-            .next()
-            .and_then(|v| v.parse().ok())
-            .ok_or_else(|| AppError::DataUnavailable("failed to parse 15m loadavg".into()))?;
-
-        Ok(LoadAvgInfo {
-            loadavg: (l1, l5, l15),
-        })
+        #[cfg(not(windows))]
+        {
+            let load = sysinfo::System::load_average();
+            Ok(LoadAvgInfo {
+                loadavg: (load.one, load.five, load.fifteen),
+            })
+        }
     }
 
     /// `render()` renders load averages as a single row
@@ -64,12 +62,12 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 mod tests {
     use super::*;
 
-    /// `collect_returns_ok_with_some_loadavg()` asserts that load average collection succeeds and
-    /// returns load averages on Linux
+    /// `collect_returns_ok_with_some_loadavg()` asserts that load average collection succeeds
+    /// and returns load averages on a Unix-like system
     ///
     #[test]
     fn collect_returns_ok_with_some_loadavg() {

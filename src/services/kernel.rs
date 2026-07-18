@@ -1,7 +1,6 @@
 use super::prelude::*;
-use crate::core::utils::read_first_line;
 
-/// `KernelInfo` contains the kernel version read from `/proc/sys/kernel/osrelease`
+/// `KernelInfo` contains the kernel/OS build version
 pub struct KernelInfo {
     pub version: String,
 }
@@ -13,10 +12,11 @@ pub struct KernelService;
 impl Service for KernelService {
     type Data = KernelInfo;
 
-    /// `collect()` reads the kernel version from `/proc/sys/kernel/osrelease`
-    //
+    /// `collect()` reads the kernel version
+    ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let version = read_first_line("/proc/sys/kernel/osrelease")?;
+        let version = sysinfo::System::kernel_version()
+            .ok_or_else(|| AppError::DataUnavailable("kernel version unavailable".into()))?;
         Ok(KernelInfo { version })
     }
 
@@ -38,7 +38,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
         ServiceMeta {
             token: "KNL",
             label: "Kernel",
-            description: "Linux kernel version",
+            description: "Kernel/OS build version",
             sort_order: 40,
         },
         Box::new(KernelService),
@@ -46,7 +46,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 mod tests {
     use super::*;
 
@@ -58,24 +58,7 @@ mod tests {
         let result = KernelService.collect();
         assert!(result.is_ok());
         let data = result.unwrap();
-        assert!(
-            !data.version.is_empty(),
-            "kernel version must not be empty on Linux"
-        );
-    }
-
-    /// `kernel_version_contains_dot_separator()` asserts that kernel version contains at least one
-    /// dot separator
-    ///
-    #[test]
-    fn kernel_version_contains_dot_separator() {
-        // A kernel version string always contains at least one '.' (e.g. "6.1.0")
-        let data = KernelService.collect().unwrap();
-        assert!(
-            data.version.contains('.'),
-            "kernel version '{:?}' expected to contain '.'",
-            data.version
-        );
+        assert!(!data.version.is_empty(), "kernel version must not be empty");
     }
 
     /// `render_does_not_panic()` asserts that rendering kernel version does not panic

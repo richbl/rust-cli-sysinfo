@@ -1,25 +1,13 @@
-use std::fs;
-use std::io::{self, BufRead};
-use std::path::Path;
-
+#[cfg(target_os = "linux")]
 use crate::core::error::AppError;
+#[cfg(target_os = "linux")]
+use std::{fs, path::Path};
 
-/// `read_first_line()` reads the first line of a file at the given path
-///
-pub fn read_first_line(path: impl AsRef<std::path::Path>) -> Result<String, AppError> {
-    let file = fs::File::open(path.as_ref())?;
-    let mut line = String::new();
-
-    io::BufReader::new(file).read_line(&mut line)?;
-
-    let len = line.trim_end_matches(['\r', '\n']).len();
-    line.truncate(len);
-
-    Ok(line)
-}
+use crate::constants::APP_NAME;
 
 /// `read_hex_u16()` reads a hexadecimal value from a file and returns it as a u16
 ///
+#[cfg(target_os = "linux")]
 pub fn read_hex_u16(path: &Path) -> Result<u16, AppError> {
     let contents = fs::read_to_string(path)?;
     let value = contents.trim().trim_start_matches("0x");
@@ -28,26 +16,23 @@ pub fn read_hex_u16(path: &Path) -> Result<u16, AppError> {
         .map_err(|_| AppError::DataUnavailable(format!("invalid hex u16 in {}", path.display())))
 }
 
-/// `find_key_value` searches a file line-by-line for a key starting with a prefix, splitting the
-/// line by the provided delimiter and returning the trimmed value
+/// `generate_title()` creates a single-line titlebar of exactly `sep_len` display columns
 ///
-pub fn find_key_value(
-    path: impl AsRef<std::path::Path>,
-    key_prefix: &str,
-    delimiter: char,
-) -> Result<Option<String>, AppError> {
-    let file = std::fs::File::open(path)?;
+/// The title is formatted as `APP_NAME` followed by enough `─` characters to fill the
+/// remaining width, so the total rendered length equals `sep_len`. Callers control the
+/// width:
+/// - Static contexts (help, services list): pass `SEP_FALLBACK.chars().count()`
+/// - Dynamic contexts (services output): pass the computed content column width
+///
+pub fn generate_title(sep_len: usize) -> String {
+    let app_len = APP_NAME.chars().count() + 1; // +1 for the separating space
 
-    for line in std::io::BufReader::new(file).lines() {
-        let line = line?;
-        if line.starts_with(key_prefix)
-            && let Some((_, val)) = line.split_once(delimiter)
-        {
-            return Ok(Some(val.trim().to_string()));
-        }
-    }
+    // Prevent underflow when APP_NAME is longer than (or equal to) sep_len
+    let fill = sep_len.saturating_sub(app_len);
 
-    Ok(None)
+    let suffix: String = "─".repeat(fill);
+
+    format!("{APP_NAME} {suffix}")
 }
 
 #[cfg(test)]
@@ -63,72 +48,6 @@ mod tests {
         let mut f = NamedTempFile::new().expect("create temp file");
         f.write_all(content.as_bytes()).expect("write temp file");
         f
-    }
-
-    /// `read_first_line_returns_only_first_line()` asserts that only the first line of a file is
-    /// returned
-    ///
-    #[test]
-    fn read_first_line_returns_only_first_line() {
-        let f = temp_file_with("first\nsecond\nthird\n");
-        assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
-            "first".to_string()
-        );
-    }
-
-    /// `read_first_line_strips_trailing_newline()` ensures that newlines are stripped
-    ///
-    #[test]
-    fn read_first_line_strips_trailing_newline() {
-        let f = temp_file_with("no_newline_leaked\n");
-        let result = read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap();
-        assert!(!result.ends_with('\n'), "newline must be stripped");
-        assert_eq!(result, "no_newline_leaked");
-    }
-
-    /// `read_first_line_no_trailing_newline_in_file()` ensures that the function returns
-    /// `Ok()` even if the file has no trailing newline
-    ///
-    #[test]
-    fn read_first_line_no_trailing_newline_in_file() {
-        let f = temp_file_with("bare");
-        assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
-            "bare".to_string()
-        );
-    }
-
-    /// `read_first_line_empty_file_returns_ok_empty_string()` ensures that the function returns
-    /// `Ok("")` even if the file is empty
-    ///
-    #[test]
-    fn read_first_line_empty_file_returns_ok_empty_string() {
-        let f = temp_file_with("");
-        assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
-            String::new()
-        );
-    }
-
-    /// `read_first_line_missing_file_returns_err()` ensures that the function returns `Err` if the
-    /// file is missing
-    ///
-    #[test]
-    fn read_first_line_missing_file_returns_err() {
-        assert!(read_first_line("/nonexistent/rcs_missing_file_for_test").is_err());
-    }
-
-    /// `read_first_line_preserves_interior_whitespace()` ensures that the function preserves
-    /// whitespace in the file
-    ///
-    #[test]
-    fn read_first_line_preserves_interior_whitespace() {
-        let f = temp_file_with("  two  spaces  \n");
-        assert_eq!(
-            read_first_line(f.path().to_str().expect("temp path is valid UTF-8")).unwrap(),
-            "  two  spaces  ".to_string()
-        );
     }
 
     /// `read_hex_u16_with_0x_prefix()` reads a hex value from a file and asserts that it is read

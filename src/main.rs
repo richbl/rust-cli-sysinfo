@@ -11,10 +11,12 @@ mod slot;
 use std::io::{self, Write};
 
 use crate::cli::Opts;
-use crate::constants::{APP_NAME, CLEAR_LINE, CLEAR_SCREEN, INDENT, LABEL_WIDTH, SEP_FALLBACK};
+use crate::constants::{CLEAR_LINE, CLEAR_SCREEN, INDENT, LABEL_WIDTH, SEP_FALLBACK};
 use crate::core::context::ServiceContext;
 use crate::core::erased::CollectResult;
 use crate::core::registry::ServiceRegistry;
+use crate::core::utils::generate_title;
+
 use crate::presentation::colors::Colors;
 use crate::presentation::format::{RenderedRow, Threshold, print_row};
 
@@ -28,8 +30,11 @@ fn render_labeled(registry: &ServiceRegistry, c: &Colors) {
         .unwrap_or(4);
 
     println!(
-        "\n{INDENT}{}{}{}\n{INDENT}{}{}",
-        c.bold, c.cyan, APP_NAME, SEP_FALLBACK, c.reset
+        "\n{INDENT}{}{}{}\n{INDENT}{}",
+        c.bold,
+        c.cyan,
+        generate_title(SEP_FALLBACK.chars().count()),
+        c.reset
     );
     println!(
         "{INDENT}To configure the services displayed, separate each service token with a\n{INDENT}hyphen (-) in the desired order.\n"
@@ -48,7 +53,7 @@ fn render_labeled(registry: &ServiceRegistry, c: &Colors) {
     }
 
     println!(
-        "\n{INDENT}Example:\n    {} -s {}OS-CPU-GPU-HST-KNL-DSKU{} -d /boot/efi",
+        "\n{INDENT}Example:\n    {} -s {}OS-CPU-GPU-HST-KNL-DSKU{} -d /boot/efi\n",
         env!("CARGO_PKG_NAME"),
         c.cyan,
         c.reset,
@@ -116,15 +121,16 @@ fn render_services(
         .max()
         .unwrap_or(0);
 
-    // Dynamically assemble standard visual horizontal dividers
+    // Dynamically assemble the separator width and print the structured table header
     let sep_len = LABEL_WIDTH + 3 + max_value_len;
-    let dynamic_sep = "─".repeat(sep_len);
 
-    // Print structured table header
     println!(
-        "{INDENT}{}{}{}\n{INDENT}{}{}",
-        colors.bold, colors.cyan, APP_NAME, dynamic_sep, colors.reset
+        "{INDENT}{}{}{}\n",
+        colors.bold,
+        colors.cyan,
+        generate_title(sep_len)
     );
+    print!("{}", colors.reset);
 
     // Output aligned and styled content cells
     for (label, row) in active_rows {
@@ -132,7 +138,12 @@ fn render_services(
     }
 
     // Print table footer
-    println!("{INDENT}{}{}{}", colors.cyan, dynamic_sep, colors.reset);
+    println!(
+        "\n{INDENT}{}{}{}",
+        colors.cyan,
+        "─".repeat(sep_len),
+        colors.reset
+    );
 }
 
 /// `main()` is the entry point for the utility

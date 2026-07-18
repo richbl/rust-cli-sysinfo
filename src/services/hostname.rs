@@ -1,7 +1,6 @@
 use super::prelude::*;
-use crate::core::utils::read_first_line;
 
-/// `HostnameInfo` contains the system hostname read from `/proc/sys/kernel/hostname`
+/// `HostnameInfo` contains the system hostname, resolved via `sysinfo`
 pub struct HostnameInfo {
     pub hostname: String,
 }
@@ -13,10 +12,11 @@ pub struct HostnameService;
 impl Service for HostnameService {
     type Data = HostnameInfo;
 
-    /// `collect()` reads the hostname from `/proc/sys/kernel/hostname`
+    /// `collect()` reads the hostname
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let hostname = read_first_line("/proc/sys/kernel/hostname")?;
+        let hostname = sysinfo::System::host_name()
+            .ok_or_else(|| AppError::DataUnavailable("hostname unavailable".into()))?;
         Ok(HostnameInfo { hostname })
     }
 
@@ -46,7 +46,7 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 mod tests {
     use super::*;
 
@@ -56,11 +56,11 @@ mod tests {
     #[test]
     fn collect_returns_ok_with_non_empty_hostname() {
         let result = HostnameService.collect();
-        assert!(result.is_ok(), "collect() must not error on Linux");
+        assert!(result.is_ok(), "collect() must not error on a supported OS");
         let data = result.unwrap();
         assert!(
             !data.hostname.is_empty(),
-            "hostname must not be empty on a running Linux system"
+            "hostname must not be empty on a running system"
         );
     }
 

@@ -7,10 +7,11 @@ pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
 
-    #[error("Data unavailable: {0}")]
+    #[error("{0}")]
     DataUnavailable(String),
 }
 
+#[cfg(target_os = "linux")]
 impl From<utwt::ParseError> for AppError {
     /// `from()` converts `utwt::ParseError` into `AppError` to facilitate error handling
     ///
@@ -50,7 +51,7 @@ mod tests {
     #[test]
     fn display_data_unavailable_includes_message() {
         let err = AppError::DataUnavailable("sensor offline".to_string());
-        assert_eq!(err.to_string(), "Data unavailable: sensor offline");
+        assert_eq!(err.to_string(), "sensor offline");
     }
 
     // From<io::Error> test

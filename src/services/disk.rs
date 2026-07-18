@@ -160,7 +160,8 @@ mod tests {
     /// `definitely_missing_path()` returns an OS-appropriate absolute path
     ///
     fn definitely_missing_path() -> PathBuf {
-        std::env::temp_dir().join("rcs-disk-test-definitely-missing-9f3a1b7e")
+        let dir = tempfile::tempdir().expect("failed to create secure temp dir");
+        dir.path().to_path_buf()
     }
 
     /// `collect_missing_path_returns_io_not_found_error()` is the specific regression this test
@@ -188,8 +189,9 @@ mod tests {
     ///
     #[test]
     fn collect_existing_path_returns_ok_with_nonzero_total() {
+        let tmp = tempfile::tempdir().expect("failed to create secure temp dir");
         let svc = DiskService {
-            mount: std::env::temp_dir(),
+            mount: tmp.path().to_path_buf(),
         };
 
         let result = svc.collect();

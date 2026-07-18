@@ -181,19 +181,19 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
       | **RCS**        |            |          **Platform**          |                                 |                                 |
       |--------------- |----------- |:-----------------------------: |:------------------------------: |:------------------------------: |
       | **Service**    | **Token**  |           **Linux**            |           **Windows**           |             **Mac**             |
-      | CPU            | CPU        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | GPU(s)         | GPU        |  $\color{green}{\huge\bullet}$ |   $\color{red}{\huge\bullet}$   |   $\color{red}{\huge\bullet}$   |
-      | OS             | OS         | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Kernel         | KNL        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | IP Address     | IP         | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Hostname       | HST        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | User(s)        | USR        | $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Uptime         | UPT        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Load Averages  | LOAD       | $\color{green}{\huge\bullet}$  |               n/a               | $\color{yellow}{\huge\bullet}$  |
-      | CPU Usage      | CPUU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Memory Usage   | RAMU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Disk Usage     | DSKU       | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
-      | Template       | TPL        | $\color{green}{\huge\bullet}$  |  $\color{green}{\huge\bullet}$  | $\color{yellow}{\huge\bullet}$  |
+      | CPU            | CPU        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | GPU(s)         | GPU        |  $\color{green}{\huge\circledast}$ |   $\color{red}{\huge\circledast}$   |   $\color{red}{\huge\circledast}$   |
+      | OS             | OS         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Kernel         | KNL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | IP Address     | IP         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Hostname       | HST        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | User(s)        | USR        | $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Uptime         | UPT        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$  |               n/a               | $\color{yellow}{\huge\circledast}$  |
+      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
+      | Template       | TPL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{yellow}{\huge\circledast}$  |
 
   Compatibility Notes:
     - The GPU service is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well

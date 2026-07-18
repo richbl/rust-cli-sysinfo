@@ -21,7 +21,7 @@
 #     Codeberg
 #   • A non-201 response from the Codeberg API fails the workflow with the
 #     response body printed for diagnosis
-
+#
 name: Mirror Release to Codeberg
 
 on:
@@ -84,12 +84,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [ -z "${TAG_NAME:-}" ]; then
+            echo "::error::TAG_NAME is empty; set inputs.tag_name or use a release event."
+            exit 1
+          fi
+
           echo "Mirroring release for tag: ${TAG_NAME}"
 
           gh release view "${TAG_NAME}" --json tagName,name,isDraft,isPrerelease,targetCommitish,body > gh_release.json
 
-          jq '{
-            tag_name: .tagName,
+          # Use the workflow TAG_NAME to guarantee tag_name is populated (gh's .tagName can be null)
+          jq --arg tag "$TAG_NAME" '{
+            tag_name: $tag,
             target_commitish: .targetCommitish,
             name: .name,
             body: .body,
@@ -121,10 +127,11 @@ jobs:
       # Create the release on Codeberg
       #
       # 201 Created is the expected success response; anything else fails the
-      # workflow with the response body printed for diagnosis
+      # workflow with the response body printed for diagnosis. If Codeberg
+      # returns 409 (release already exists), find and reuse/update that release.
       # ----------------------------------------------------------------------
       #
-      - name: Create release on Codeberg
+      - name: Create (or reuse) release on Codeberg
         run: |
           set -euo pipefail
 
@@ -139,21 +146,58 @@ jobs:
           RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
           HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
-          if [ "$HTTP_STATUS" -ne 201 ]; then
+          if [ "$HTTP_STATUS" -eq 201 ]; then
+            RELEASE_ID=$(echo "$RESPONSE_BODY" | jq -r '.id')
+            echo "Successfully created Codeberg release (ID: $RELEASE_ID)"
+            echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
+
+          elif [ "$HTTP_STATUS" -eq 409 ]; then
+            echo "Codeberg returned 409 — trying to find existing release by tag: ${TAG_NAME}"
+
+            # Try GET /releases/tags/{tag}
+            GET_RESPONSE=$(curl -s -H "accept: application/json" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/tags/${TAG_NAME}")
+
+            RELEASE_ID=$(echo "$GET_RESPONSE" | jq -r '.id // empty')
+
+            if [ -n "$RELEASE_ID" ]; then
+              echo "Found existing Codeberg release (ID: $RELEASE_ID), updating metadata."
+              # PATCH the release to apply any updated name/body/draft/prerelease
+              PATCH_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X PATCH \
+                "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/${RELEASE_ID}" \
+                -H "accept: application/json" \
+                -H "Authorization: token ${CODEBERG_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d @final_payload.json)
+
+              PATCH_BODY=$(echo "$PATCH_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
+              PATCH_STATUS=$(echo "$PATCH_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+              if [ "$PATCH_STATUS" -ge 200 ] && [ "$PATCH_STATUS" -lt 300 ]; then
+                echo "Successfully updated existing release metadata."
+                echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
+              else
+                echo "::error::Failed to update existing release metadata (HTTP $PATCH_STATUS)"
+                echo "::error::Response: $PATCH_BODY"
+                exit 1
+              fi
+            else
+              echo "::error::Failed to create release (409) and could not find existing release by tag."
+              echo "::error::Response: $RESPONSE_BODY"
+              exit 1
+            fi
+
+          else
             echo "::error::Failed to create release. HTTP Status: $HTTP_STATUS"
             echo "::error::Response: $RESPONSE_BODY"
             exit 1
           fi
 
-          RELEASE_ID=$(echo "$RESPONSE_BODY" | jq -r '.id')
-          echo "Successfully created Codeberg release (ID: $RELEASE_ID)"
-          echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
-
       # ----------------------------------------------------------------------
       # Download the release's binary assets from GitHub and re-upload them
-      # to the Codeberg release created above
-      #
-      # Gracefully skips if the release has no assets
+      # to the Codeberg release created above. If an asset with the same name
+      # exists, delete it first so the new upload replaces it.
       # ----------------------------------------------------------------------
       #
       - name: Mirror release assets to Codeberg
@@ -168,11 +212,37 @@ jobs:
           for file in release_assets/*; do
             [ -f "$file" ] || continue
             FILENAME=$(basename "$file")
+            echo "Preparing to upload ${FILENAME} to Codeberg (release ID: ${RELEASE_ID})..."
+
+            # List existing assets for the release and find any with the same name
+            EXISTING_ASSET_ID=$(curl -s -H "accept: application/json" \
+              -H "Authorization: token ${CODEBERG_TOKEN}" \
+              "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/${RELEASE_ID}/assets" \
+              | jq -r --arg name "$FILENAME" '.[] | select(.name == $name) | .id' | head -n 1 || true)
+
+            if [ -n "$EXISTING_ASSET_ID" ]; then
+              echo "Deleting existing asset ${FILENAME} (asset id: ${EXISTING_ASSET_ID})..."
+              curl -s -X DELETE \
+                -H "Authorization: token ${CODEBERG_TOKEN}" \
+                "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/${RELEASE_ID}/assets/${EXISTING_ASSET_ID}" \
+                || echo "Warning: failed to delete existing asset ${EXISTING_ASSET_ID}; proceeding to upload"
+            fi
+
             echo "Uploading ${FILENAME} to Codeberg..."
-            curl -s -X POST "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/${RELEASE_ID}/assets" \
+            UPLOAD_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://${CODEBERG_HOST}/api/v1/repos/${REPO_SLUG}/releases/${RELEASE_ID}/assets" \
               -H "accept: application/json" \
               -H "Authorization: token ${CODEBERG_TOKEN}" \
-              -F "attachment=@${file}"
+              -F "attachment=@${file}")
+
+            UPLOAD_BODY=$(echo "$UPLOAD_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
+            UPLOAD_STATUS=$(echo "$UPLOAD_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+            if [ "$UPLOAD_STATUS" -lt 200 ] || [ "$UPLOAD_STATUS" -ge 300 ]; then
+              echo "::error::Asset upload failed for ${FILENAME} (HTTP $UPLOAD_STATUS)"
+              echo "::error::Response: $UPLOAD_BODY"
+              exit 1
+            fi
           done
 
           echo "Codeberg release mirroring complete."
+

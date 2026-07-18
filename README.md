@@ -8,7 +8,7 @@
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo"><img align="middle" width="85" alt="Gitberg logo" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/gitberg_logo.png"></a>
 <!-- markdownlint-enable MD033 -->
 
-**Rust-CLI-Sysinfo** (RCS) is a lightweight, modular Rust utility for the Linux terminal that displays the status of customizable system services
+**Rust-CLI-Sysinfo** (RCS) is a lightweight, cross-platform, modular Rust utility for the terminal that displays the status of customizable system services
 
 ## RCS Features
 
@@ -17,7 +17,7 @@
         - CPU hardware details and real-time usage
         - GPU hardware details
         - Operating system
-        - Kernel version
+        - Kernel/OS build version
         - IP address
         - Hostname
         - Currently logged-in user(s)
@@ -98,7 +98,7 @@ This will result in the following output:
 
 Want to create a new service that doesn't yet exist in RCS?
 
-RCS leverages a **"zero-touch architecture"**, where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
+RCS follows the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle)  where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
 
 To create a new RCS service:
 
@@ -115,8 +115,9 @@ To create a new RCS service:
 ### Requirements
 
 - **Run-Time**
-    - Any standard modern Linux environment
+    - Any standard modern Linux, MacOS, or Windows environment
     - **Rust-CLI-Sysinfo** releases include a pre-compiled binary that runs natively on a Linux AMD64 architecture
+        - Future releases may also include pre-compiled binaries for other platforms
   
 - **Build-Time**
     - If you're interested in compiling from source, you'll need a functioning installation of the Rust toolchain (using Cargo)
@@ -197,7 +198,8 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
 
   Compatibility Notes:
     - The GPU service (GPU) is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
+ 
+    - The User(s) service (USR) is not yet implemented on Windows and MacOS, as a cross-platform solution for identifying actively "logged-in" users has not yet been identified
 
     - The Load Average service (LOAD) is not available on Windows, as the concept of load averages is not applicable to that platform
 
-    - As well, the User(s) service (USR) is not yet implemented on Windows and MacOS, as a cross-platform solution for identifying actively "logged-in" users has not yet been identified

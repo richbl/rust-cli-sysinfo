@@ -67,9 +67,11 @@ fn collect_service_names(services_dir: &Path) -> Vec<String> {
 ///
 fn generate_mod_declarations(names: &[String], manifest_dir: &str) -> String {
     names.iter().fold(String::new(), |mut acc, name| {
+        // Normalize backslashes to forward slashes for cross-platform compatibility
+        let normalized_path = manifest_dir.replace('\\', "/");
         writeln!(
             acc,
-            "#[path = \"{manifest_dir}/src/services/{name}.rs\"]\npub mod {name};"
+            "#[path = \"{normalized_path}/src/services/{name}.rs\"]\npub mod {name};"
         )
         .expect("writing to a String cannot fail");
         acc

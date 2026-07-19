@@ -1,4 +1,4 @@
-name: Build multi-platform test binaries
+name: Build multi-platform RCS binaries
 
 on:
   workflow_dispatch:

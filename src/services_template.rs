@@ -1,5 +1,14 @@
 use super::prelude::*;
 
+/// This `services_template.rs` file serves as a very simple minimalist example of the pattern
+/// used to create a new RCS service
+///
+/// 1. Make a copy of this file, and place it in the `/services` folder
+/// 2. Edit this new service file, and save it
+/// 3. Build RCS: the build process will look in the `/services` folder and include all service
+///    files found there
+///
+
 /// `TemplateInfo` is the data your service collects. It can be anything — a `String`, numeric
 /// metrics, a `Vec` of results, etc. It doesn't need to implement any trait; `Service::Data`
 /// only requires it to be a plain type. Note that it does need to be `Send + Sync + 'static` for

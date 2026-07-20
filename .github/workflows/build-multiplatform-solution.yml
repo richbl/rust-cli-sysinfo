@@ -17,7 +17,7 @@ jobs:
             artifact: rust-cli-sysinfo-macos-x86-64
             binary-name: rust-cli-sysinfo
           - name: "macOS Apple Silicon"
-            runs-on: macos-15-arm64
+            runs-on: macos-15
             target: aarch64-apple-darwin
             artifact: rust-cli-sysinfo-macos-arm64
             binary-name: rust-cli-sysinfo

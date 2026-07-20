@@ -1,16 +1,13 @@
 name: Build multi-platform RCS binaries
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build:
     name: Build ${{ matrix.name }} binary
     runs-on: ${{ matrix.runs-on }}
-    
+
     strategy:
       matrix:
         include:
@@ -34,37 +31,44 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact: rust-cli-sysinfo-linux-x86-64
             binary-name: rust-cli-sysinfo
-
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
-
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
+      # macOS & Linux: tar.gz is the Unix convention, flattened with -C (no nested folder)
       - name: Package binary (macOS & Linux)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p dist
-          cp target/${{ matrix.target }}/release/${{ matrix.binary-name }} dist/
-          cd dist
-          zip -r ${{ matrix.artifact }}.zip ${{ matrix.binary-name }}
+          mkdir -p dist stage
+          cp target/${{ matrix.target }}/release/${{ matrix.binary-name }} stage/
+          tar -czf dist/${{ matrix.artifact }}.tar.gz -C stage ${{ matrix.binary-name }}
 
+      # Windows: native zip via Compress-Archive, already flat
       - name: Package binary (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item -Path "target\${{ matrix.target }}\release\${{ matrix.binary-name }}" -Destination "dist\"
-          Compress-Archive -Path "dist\${{ matrix.binary-name }}" -DestinationPath "dist\${{ matrix.artifact }}.zip"
+          New-Item -ItemType Directory -Force -Path dist, stage | Out-Null
+          Copy-Item -Path "target\${{ matrix.target }}\release\${{ matrix.binary-name }}" -Destination "stage\"
+          Compress-Archive -Path "stage\${{ matrix.binary-name }}" -DestinationPath "dist\${{ matrix.artifact }}.zip"
 
-      - name: Upload artifact
+      - name: Upload artifact (macOS & Linux)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.tar.gz
+          retention-days: 14
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ${{ matrix.artifact }}

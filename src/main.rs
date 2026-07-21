@@ -150,7 +150,7 @@ fn render_services(
 ///
 fn main() {
     let opts = Opts::from_args();
-    let colors = Colors::new(opts.color);
+    let colors = Colors::new(opts.color, opts.service_key_color.as_deref());
 
     let ctx = ServiceContext::from(&opts);
     let registry = ServiceRegistry::new(&ctx);

@@ -99,7 +99,7 @@ This will result in the following output:
 
 Want to create a new service that doesn't yet exist in RCS?
 
-RCS follows the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle)  where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
+RCS follows the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle) where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
 
 To create a new RCS service:
 
@@ -170,7 +170,7 @@ Nice!
 
 RCS is designed to remain lean and fast, but some goals for upcoming releases include:
 
-- [x] Streamline modular service generation patterns (Zero-touch compilation)
+- [x] Streamline modular service generation patterns (following the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle))
 
 - [-] Additional metric services:
     - Network interfaces (IP address added in v0.9.0)

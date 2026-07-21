@@ -1,7 +1,5 @@
 use super::colors::Colors;
-use crate::constants::{
-    INDENT, KB_PER_GB, KB_PER_MB, KB_PER_TB, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN,
-};
+use crate::constants::{INDENT, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MIN};
 
 /// `Threshold` controls value-based color thresholds for utility rows
 ///
@@ -57,32 +55,6 @@ pub fn format_uptime(seconds: u64) -> String {
     let secs = seconds % SECS_PER_MIN;
 
     format!("{days:03}d:{hours:02}h:{mins:02}m:{secs:02}s")
-}
-
-/// `format_size()` formats a size given in kilobytes as a human-readable string with a T/G/M/K
-/// suffix
-///
-#[must_use]
-pub fn format_size(kb: u64) -> String {
-    // Casting integer size constants to f64 for fractional division (precision loss possible)
-    #[allow(clippy::cast_precision_loss)]
-    const UNITS: &[(f64, &str)] = &[
-        (KB_PER_TB as f64, "T"),
-        (KB_PER_GB as f64, "G"),
-        (KB_PER_MB as f64, "M"),
-    ];
-
-    #[allow(clippy::cast_precision_loss)]
-    let k = kb as f64;
-
-    // Check for any unit prefix
-    for &(threshold, suffix) in UNITS {
-        if k >= threshold {
-            return format!("{:.1}{suffix}", k / threshold);
-        }
-    }
-
-    format!("{kb}K")
 }
 
 #[cfg(test)]

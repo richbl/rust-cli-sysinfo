@@ -1,5 +1,5 @@
 use super::prelude::*;
-use crate::constants::{MEM_CRIT_PCT, MEM_WARN_PCT};
+use crate::constants::{KB_PER_GB, MEM_CRIT_PCT, MEM_WARN_PCT};
 
 /// `MemInfo` contains memory usage metrics
 ///
@@ -36,15 +36,27 @@ impl Service for MemoryService {
         Ok(MemInfo { total, used, pct })
     }
 
-    /// `render()` renders memory usage as a percentage with used/total in MB and threshold-based
+    /// `render()` renders memory usage as a percentage with used/total in GiB and threshold-based
     /// color coding
     ///
     fn render(&self, mem: &Self::Data) -> Result<RenderedRow, AppError> {
+        // Convert to tenths of GiB using integer arithmetic to avoid casting large
+        // integers to f64 and triggering potential precision-loss
+        let used_tenths =
+            (u128::from(mem.used) * 10 + u128::from(KB_PER_GB) / 2) / u128::from(KB_PER_GB);
+        let total_tenths =
+            (u128::from(mem.total) * 10 + u128::from(KB_PER_GB) / 2) / u128::from(KB_PER_GB);
+
+        // Split into whole and fractional (tenths) parts and format without
+        // creating f64 values for the sizes.
+        let used_whole = used_tenths / 10;
+        let used_frac = used_tenths % 10;
+        let total_whole = total_tenths / 10;
+        let total_frac = total_tenths % 10;
+
         let mem_str = format!(
-            "{:.1}% ({}M/{}M)",
-            mem.pct,
-            mem.used / 1024,
-            mem.total / 1024
+            "{:.1}% ({}.{}/{}.{} GiB)",
+            mem.pct, used_whole, used_frac, total_whole, total_frac
         );
 
         Ok(RenderedRow {
@@ -71,4 +83,35 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
         },
         Box::new(MemoryService),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `collect_returns_ok_and_nonzero_total()` asserts that memory collection succeeds and
+    /// returns non-zero total memory on a running system
+    ///
+    #[test]
+    fn collect_returns_ok_and_nonzero_total() {
+        let result = MemoryService.collect();
+        assert!(result.is_ok());
+        let mem = result.unwrap();
+        assert!(mem.total > 0);
+    }
+
+    /// `render_formats_in_gib()` asserts that rendering memory usage formats used and total
+    /// in GiB with one decimal place
+    ///
+    #[test]
+    fn render_formats_in_gib() {
+        let mem = MemInfo {
+            total: 28_351_488, // ~27.0 GiB
+            used: 4_346_880,   // ~4.145 GiB -> 4.1 GiB
+            pct: 15.3,
+        };
+
+        let row = MemoryService.render(&mem).unwrap();
+        assert_eq!(row.value, "15.3% (4.1/27.0 GiB)");
+    }
 }

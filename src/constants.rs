@@ -39,15 +39,13 @@ pub const SECS_PER_MIN: u64 = 60;
 pub const SECS_PER_HOUR: u64 = 3_600;
 pub const SECS_PER_DAY: u64 = 86_400;
 
-// Size conversions for `format_size()`
-pub const KB_PER_MB: u64 = 1_024;
+// Size conversions
 pub const KB_PER_GB: u64 = 1_048_576;
-pub const KB_PER_TB: u64 = 1_073_741_824;
 
 // Warning/Critical thresholds percentages
 pub const CPU_WARN_PCT: f64 = 70.0;
 pub const CPU_CRIT_PCT: f64 = 90.0;
-pub const MEM_WARN_PCT: f64 = 75.0;
+pub const MEM_WARN_PCT: f64 = 70.0;
 pub const MEM_CRIT_PCT: f64 = 90.0;
-pub const DISK_WARN_PCT: f64 = 80.0;
-pub const DISK_CRIT_PCT: f64 = 95.0;
+pub const DISK_WARN_PCT: f64 = 70.0;
+pub const DISK_CRIT_PCT: f64 = 90.0;

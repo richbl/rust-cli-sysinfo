@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use super::prelude::*;
-use crate::constants::{DISK_CRIT_PCT, DISK_WARN_PCT};
-use crate::presentation::format::format_size;
+use crate::constants::{DISK_CRIT_PCT, DISK_WARN_PCT, KB_PER_GB};
 
 /// `DiskInfo` contains disk usage metrics for a single mount point
 #[derive(Default, Debug)]
@@ -108,7 +107,7 @@ impl Service for DiskService {
         })
     }
 
-    /// `render()` renders disk usage as a percentage with used/total sizes
+    /// `render()` renders disk usage as a percentage with used/total sizes in GiB
     ///
     fn render(&self, disk: &Self::Data) -> Result<RenderedRow, AppError> {
         let (value, threshold) = if disk.total_kb == 0 {
@@ -116,12 +115,26 @@ impl Service for DiskService {
             // conceivably occur
             ("n/a".to_string(), Threshold::None)
         } else {
+            // Convert to tenths of GiB using integer arithmetic to avoid casting large
+            // integers to f64 and triggering potential precision-loss
+            let used_tenths =
+                (u128::from(disk.used_kb) * 10 + u128::from(KB_PER_GB) / 2) / u128::from(KB_PER_GB);
+            let total_tenths = (u128::from(disk.total_kb) * 10 + u128::from(KB_PER_GB) / 2)
+                / u128::from(KB_PER_GB);
+
+            let used_whole = used_tenths / 10;
+            let used_frac = used_tenths % 10;
+            let total_whole = total_tenths / 10;
+            let total_frac = total_tenths % 10;
+
             // display() handles formatting potential non-UTF-8 characters
             let text = format!(
-                "{:.1}% ({}/{}) of {}",
+                "{:.1}% ({}.{}/{}.{} GiB) of {}",
                 disk.pct,
-                format_size(disk.used_kb),
-                format_size(disk.total_kb),
+                used_whole,
+                used_frac,
+                total_whole,
+                total_frac,
                 self.mount.display()
             );
             (
@@ -252,15 +265,14 @@ mod tests {
             mount: PathBuf::from("/anywhere"),
         };
         let data = DiskInfo {
-            total_kb: 1_000_000,
-            used_kb: 850_000,
-            pct: 85.0,
+            total_kb: 485_709_824,
+            used_kb: 199_019_724,
+            pct: 41.0,
         };
 
         let row = svc.render(&data).unwrap();
-        assert!(row.value.contains("85.0%"));
-        assert!(row.value.contains("/anywhere"));
-        assert_is_check_threshold_matching(&row.threshold, 85.0, DISK_WARN_PCT, DISK_CRIT_PCT);
+        assert_eq!(row.value, "41.0% (189.8/463.2 GiB) of /anywhere");
+        assert_is_check_threshold_matching(&row.threshold, 41.0, DISK_WARN_PCT, DISK_CRIT_PCT);
     }
 
     /// `picks_longest_enclosing_mount()` asserts the closest (longest-prefix) mount wins over a

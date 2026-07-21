@@ -28,6 +28,7 @@
 
 - **Customizable Services Layout**
     - Select exactly which service components to display and specify their order using service tokens (see `-s`/`--services` for details)
+    - Configure the service key label colors with 24-bit ANSI truecolor (e.g., `"#b4b38f"`)
   
 - **Custom New Services**
     - New system services can be added easily by creating a new service file, dropping it into the `src/services` folder: RCS will automatically detect and render it as an available new service
@@ -179,27 +180,26 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
 - [-] Cross-platform compatibility expansion (macOS and Windows support profiles)
     - Currently in progress, with a focus on utilizing the most appropriate cross-platform Rust crates for each supported service:
 
-      | **RCS**        |            |          **Platform**          |                                 |                                 |
-      |--------------- |----------- |:-----------------------------: |:------------------------------: |:------------------------------: |
-      | **Service**    | **Token**  |           **Linux**            |           **Windows**           |             **Mac**             |
-      | CPU            | CPU        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | GPU(s)         | GPU        |  $\color{green}{\huge\circledast}$ |   $\color{yellow}{\huge\circledast}$   |   $\color{yellow}{\huge\circledast}$   |
-      | OS             | OS         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Kernel         | KNL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | IP Address     | IP         | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Hostname       | HST        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | User(s)        | USR        | $\color{green}{\huge\circledast}$  | $\color{red}{\huge\circledast}$  | $\color{red}{\huge\circledast}$  |
-      | Uptime         | UPT        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$  |               n/a               | $\color{green}{\huge\circledast}$  |
-      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Template       | TPL        | $\color{green}{\huge\circledast}$  |  $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | **RCS**        |            |          **Platform**             |                                    |                                    |
+      |--------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
+      | **Service**    | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
+      | CPU            | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ |
+      | OS             | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Kernel         | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | IP Address     | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Hostname       | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ |
+      | Uptime         | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
+      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+      | Template       | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
 
   Compatibility Notes:
     - The GPU service (GPU) is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
- 
+
     - The User(s) service (USR) is not yet implemented on Windows and MacOS, as a cross-platform solution for identifying actively "logged-in" users has not yet been identified
 
     - The Load Average service (LOAD) is not available on Windows, as the concept of load averages is not applicable to that platform
-

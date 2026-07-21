@@ -9,11 +9,12 @@ use crate::slot::{self, SlotFilter};
 
 /// `Opts` contains the parsed command-line options for the utility
 pub struct Opts {
-    pub clear: bool,             // Clear the terminal before displaying output
-    pub color: bool,             // Enable ANSI color output
-    pub disk_mount: String,      // Filesystem mount path to report disk usage for
-    pub cpu_sample_ms: u64,      // CPU sampling window duration in milliseconds
-    pub slot_filter: SlotFilter, // Service selection and ordering
+    pub clear: bool,                       // Clear the terminal before displaying output
+    pub color: bool,                       // Enable ANSI color output
+    pub disk_mount: String,                // Filesystem mount path to report disk usage for
+    pub cpu_sample_ms: u64,                // CPU sampling window duration in milliseconds
+    pub service_key_color: Option<String>, // Custom hex color for service label keys
+    pub slot_filter: SlotFilter,           // Service selection and ordering
 }
 
 /// `default_disk_mount()` returns a platform-appropriate default path for `-d/--disk`
@@ -35,6 +36,7 @@ impl Opts {
         let mut color = io::stdout().is_terminal();
         let mut disk_mount = default_disk_mount();
         let mut cpu_sample_ms = 250_u64;
+        let mut service_key_color: Option<String> = None;
         let mut slot_filter = SlotFilter::Default;
 
         let mut parser = lexopt::Parser::from_env();
@@ -50,11 +52,14 @@ impl Opts {
                 lexopt::Arg::Short('c') | lexopt::Arg::Long("cpu-sample-rate") => {
                     cpu_sample_ms = parse_cpu_sample_ms(&mut parser);
                 }
+                lexopt::Arg::Short('k') | lexopt::Arg::Long("service-key-color") => {
+                    service_key_color = Some(parse_service_key_color(&mut parser));
+                }
                 lexopt::Arg::Short('s') | lexopt::Arg::Long("services") => {
                     slot_filter = parse_slot_filter(&mut parser);
                 }
                 lexopt::Arg::Short('h') | lexopt::Arg::Long("help") => {
-                    print_usage(&Colors::new(color));
+                    print_usage(&Colors::new(color, None));
                     process::exit(0);
                 }
                 unknown => fail(&format!("Unknown option '{}'", format_arg(unknown))),
@@ -66,6 +71,7 @@ impl Opts {
             color,
             disk_mount,
             cpu_sample_ms,
+            service_key_color,
             slot_filter,
         }
     }
@@ -90,6 +96,47 @@ fn parse_cpu_sample_ms(parser: &mut lexopt::Parser) -> u64 {
         .and_then(|v| v.to_str()?.parse().ok())
         .filter(|&ms: &u64| ms > 0)
         .unwrap_or_else(|| fail("-c/--cpu-sample-rate requires a positive integer (e.g., -c 250)"))
+}
+
+/// `parse_service_key_color()` reads and validates the required hex color argument for `-k`
+///
+/// Accepts colors in `#RRGGBB` format (e.g., `"#ff8800"`). Both uppercase and lowercase
+/// hex digits are accepted
+///
+fn parse_service_key_color(parser: &mut lexopt::Parser) -> String {
+    let raw = parser
+        .value()
+        .unwrap_or_else(|_| {
+            fail("-k/--service-key-color requires a hex color (e.g., -k \"#ff8800\")")
+        })
+        .to_string_lossy()
+        .into_owned();
+
+    validate_hex_color(&raw).unwrap_or_else(|e| fail(&e))
+}
+
+/// `validate_hex_color()` parses a `#RRGGBB` string and returns it if valid, or an error message
+///
+pub fn validate_hex_color(raw: &str) -> Result<String, String> {
+    let bytes = raw.as_bytes();
+
+    if bytes.first() != Some(&b'#') || bytes.len() != 7 {
+        return Err(format!(
+            "invalid color '{raw}': expected format #RRGGBB (e.g., #ff8800)"
+        ));
+    }
+
+    // Validate that all six nibbles are valid ASCII hex digits
+    for &b in &bytes[1..] {
+        if !b.is_ascii_hexdigit() {
+            return Err(format!(
+                "invalid color '{raw}': '{}' is not a valid hex digit",
+                b as char
+            ));
+        }
+    }
+
+    Ok(raw.to_ascii_lowercase())
 }
 
 /// `parse_slot_filter()` reads the optional token list argument for `-s/--services`
@@ -148,14 +195,15 @@ pub fn fail_unknown_token(token: &str, registry: &ServiceRegistry) -> usize {
 pub fn print_usage(c: &Colors) {
     let options_text = format!(
         "  Options:
-    {cyan}-s, --services [TOKENS]{reset}     Select and order available services: 
-                                  Run -s with no arguments to see available tokens
+    {cyan}-s, --services [TOKENS]{reset}           Select and order available services:
+                                        Run -s with no arguments to see available tokens
 
-    {cyan}-d, --disk <path>{reset}           Disk mount to report disk usage [default: /home or C:\\]
-    {cyan}-c, --cpu-sample-rate <ms>{reset}  CPU sampling window in milliseconds [default: 250]
-    {cyan}-n, --no-clear{reset}              Skip clearing the terminal before output
-    {cyan}-o, --no-color{reset}              Disable ANSI color output
-    {cyan}-h, --help{reset}                  Show this help message and exit",
+    {cyan}-d, --disk <path>{reset}                 Disk mount to report disk usage [default: /home or C:\\]
+    {cyan}-c, --cpu-sample-rate <ms>{reset}        CPU sampling window in milliseconds [default: 250]
+    {cyan}-k, --service-key-color <#RRGGBB>{reset} Service label color in hex (e.g., \"#ff8800\")
+    {cyan}-n, --no-clear{reset}                    Skip clearing the terminal before output
+    {cyan}-o, --no-color{reset}                    Disable ANSI color output
+    {cyan}-h, --help{reset}                        Show this help message and exit",
         cyan = c.cyan,
         reset = c.reset
     );
@@ -181,7 +229,7 @@ pub fn print_usage(c: &Colors) {
 /// `fail()` prints an error message with usage instructions and exits
 ///
 fn fail(msg: &str) -> ! {
-    let c = Colors::new(true);
+    let c = Colors::new(true, None);
     eprintln!("\n  {}{}{}", c.red, msg, c.reset);
     print_usage(&c);
     process::exit(1);
@@ -194,5 +242,75 @@ fn format_arg(arg: lexopt::Arg) -> String {
         lexopt::Arg::Long(s) => format!("--{s}"),
         lexopt::Arg::Short(c) => format!("-{c}"),
         lexopt::Arg::Value(v) => v.to_string_lossy().into_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `valid_lowercase_hex_is_accepted()` asserts that a correctly formatted lowercase hex color
+    /// is accepted and returned in canonical lowercase form
+    ///
+    #[test]
+    fn valid_lowercase_hex_is_accepted() {
+        assert_eq!(validate_hex_color("#ff8800"), Ok("#ff8800".to_string()));
+    }
+
+    /// `valid_uppercase_hex_is_normalized_to_lowercase()` asserts that uppercase hex digits are
+    /// normalized to lowercase
+    ///
+    #[test]
+    fn valid_uppercase_hex_is_normalized_to_lowercase() {
+        assert_eq!(validate_hex_color("#FF8800"), Ok("#ff8800".to_string()));
+    }
+
+    /// `valid_black_is_accepted()` asserts that the boundary value `#000000` is accepted
+    ///
+    #[test]
+    fn valid_black_is_accepted() {
+        assert!(validate_hex_color("#000000").is_ok());
+    }
+
+    /// `valid_white_is_accepted()` asserts that the boundary value `#ffffff` is accepted
+    ///
+    #[test]
+    fn valid_white_is_accepted() {
+        assert!(validate_hex_color("#ffffff").is_ok());
+    }
+
+    /// `missing_hash_prefix_is_rejected()` asserts that a color without the leading `#` is rejected
+    ///
+    #[test]
+    fn missing_hash_prefix_is_rejected() {
+        assert!(validate_hex_color("ff8800").is_err());
+    }
+
+    /// `too_short_is_rejected()` asserts that a color string shorter than 7 chars is rejected
+    ///
+    #[test]
+    fn too_short_is_rejected() {
+        assert!(validate_hex_color("#ff88").is_err());
+    }
+
+    /// `too_long_is_rejected()` asserts that a color string longer than 7 chars is rejected
+    ///
+    #[test]
+    fn too_long_is_rejected() {
+        assert!(validate_hex_color("#ff880011").is_err());
+    }
+
+    /// `invalid_hex_digit_is_rejected()` asserts that a non-hex character in the color is rejected
+    ///
+    #[test]
+    fn invalid_hex_digit_is_rejected() {
+        assert!(validate_hex_color("#gg0000").is_err());
+    }
+
+    /// `empty_string_is_rejected()` asserts that an empty string is rejected
+    ///
+    #[test]
+    fn empty_string_is_rejected() {
+        assert!(validate_hex_color("").is_err());
     }
 }

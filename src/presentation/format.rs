@@ -33,13 +33,16 @@ pub fn color_for_threshold(threshold: &Threshold, c: &Colors) -> &'static str {
     }
 }
 
-/// `print_row()` prints a left-aligned label/value row, coloring the value
+/// `print_row()` prints a left-aligned label/value row, coloring the label with the
+/// service-key color and the value with the threshold-derived color
 ///
 pub fn print_row(label: &str, value: &str, threshold: &Threshold, c: &Colors) {
-    let color = color_for_threshold(threshold, c);
+    let value_color = color_for_threshold(threshold, c);
     println!(
-        "{INDENT}{:<LABEL_WIDTH$} {color}{value}{}",
+        "{INDENT}{}{:<LABEL_WIDTH$}{} {value_color}{value}{}",
+        c.service_key,
         format!("{label}:"),
+        c.reset,
         c.reset
     );
 }
@@ -120,7 +123,7 @@ mod tests {
     ///
     #[test]
     fn color_for_threshold_none_returns_reset() {
-        let c = Colors::new(true);
+        let c = Colors::new(true, None);
         assert_eq!(color_for_threshold(&Threshold::None, &c), c.reset);
     }
 
@@ -128,7 +131,7 @@ mod tests {
     ///
     #[test]
     fn color_for_threshold_below_warn_returns_green() {
-        let c = Colors::new(true);
+        let c = Colors::new(true, None);
         let t = Threshold::Check {
             value: 50.0,
             warn: 70.0,
@@ -137,11 +140,11 @@ mod tests {
         assert_eq!(color_for_threshold(&t, &c), c.green);
     }
 
-    /// `color_for_threshold_above_warn_returns_yellow()` asserts that a value >= warn returns yellow
+    /// `color_for_threshold_above_warn_returns_yellow()` asserts that a value >= warn returns green
     ///
     #[test]
     fn color_for_threshold_above_warn_returns_yellow() {
-        let c = Colors::new(true);
+        let c = Colors::new(true, None);
         let t = Threshold::Check {
             value: 75.0,
             warn: 70.0,
@@ -154,7 +157,7 @@ mod tests {
     ///
     #[test]
     fn color_for_threshold_above_crit_returns_red() {
-        let c = Colors::new(true);
+        let c = Colors::new(true, None);
         let t = Threshold::Check {
             value: 95.0,
             warn: 70.0,
@@ -167,7 +170,7 @@ mod tests {
     ///
     #[test]
     fn color_for_threshold_error_returns_red() {
-        let c = Colors::new(true);
+        let c = Colors::new(true, None);
         assert_eq!(color_for_threshold(&Threshold::Error, &c), c.red);
     }
 }

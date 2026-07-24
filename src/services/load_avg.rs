@@ -21,9 +21,9 @@ impl Service for LoadAvgService {
     fn collect(&self) -> Result<Self::Data, AppError> {
         #[cfg(windows)]
         {
-            return Err(AppError::DataUnavailable(
+            Err(AppError::DataUnavailable(
                 "This service has no equivalent on this platform".into(),
-            ));
+            ))
         }
 
         #[cfg(not(windows))]

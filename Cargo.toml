@@ -1,6 +1,6 @@
 [package]
   name = "rust-cli-sysinfo"
-  version = "0.11.0"
+  version = "0.12.0"
   edition = "2024"
   build = "build.rs"
 
@@ -17,6 +17,11 @@
 [target.'cfg(target_os = "linux")'.dependencies]
   utwt = "0.4"      # parse active/logged-in users
   pci-ids = "0.2.6" # GPU vendor/model lookup
+
+[target.'cfg(target_os = "windows")'.dependencies]
+  # Official Microsoft Rust/Win32 bindings; used for WTS session enumeration (active/logged-in
+  # users)
+  windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_RemoteDesktop"] }
 
 [dev-dependencies]
   tempfile = "3"

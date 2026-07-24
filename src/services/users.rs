@@ -1,11 +1,14 @@
 use super::prelude::*;
 
-#[cfg(not(target_os = "linux"))]
-use crate::constants::NOT_YET_IMPLEMENTED;
-
-/// `UsersInfo` contains the list of logged-in users (Linux only, via `/var/run/utmp`)
-/// Currently unclear how to implement this on Windows or macOS, as the concept is not
-/// cross-platform
+/// `UsersInfo` contains the list of currently logged-in users
+///
+/// A "logged-in user" means an account with an **active, currently-connected interactive
+/// login session** on this machine right now — the same standard the `who(1)` command applies
+/// on Linux via `utmp`: someone sitting at the console, or connected in over SSH/RDP, at this
+/// moment. It excludes:
+///   - system/service accounts that own background daemons but never logged in interactively
+///   - accounts that logged in previously but are no longer connected (e.g. a disconnected,
+///     backgrounded Remote Desktop session on Windows)
 ///
 #[derive(Default)]
 pub struct UsersInfo {
@@ -19,10 +22,10 @@ pub struct UsersService;
 impl Service for UsersService {
     type Data = UsersInfo;
 
-    /// `collect()` delegates to the platform-specific implementation below
+    /// `collect()` delegates to the platform-specific implementation selected below
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        collect_users()
+        platform::collect_users()
     }
 
     /// `render()` renders the list of logged-in users as a comma-separated row
@@ -40,44 +43,24 @@ impl Service for UsersService {
     }
 }
 
-/// `collect_users()` reads the list of logged-in users
-///
+// Platform-specific collection lives under `src/services/users/`: one file per OS/platform
+//
 #[cfg(target_os = "linux")]
-fn collect_users() -> Result<UsersInfo, AppError> {
-    let entries = match utwt::parse_utmp() {
-        Ok(e) => e,
-        Err(utwt::ParseError::Io(io_err))
-            if matches!(
-                io_err.kind(),
-                std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
-            ) =>
-        {
-            // Oh no! `utmp` absent or permission denied? --> degrade gracefully
-            return Ok(UsersInfo::default());
-        }
-        Err(e) => return Err(AppError::from(e)),
-    };
+#[path = "users/linux.rs"]
+mod platform;
 
-    let mut users: Vec<String> = entries
-        .into_iter()
-        .filter_map(|entry| match entry {
-            // user: String is a named field inside UserProcess — no method call needed
-            utwt::UtmpEntry::UserProcess { user, .. } if !user.is_empty() => Some(user),
-            _ => None,
-        })
-        .collect();
+#[cfg(target_os = "windows")]
+#[path = "users/windows.rs"]
+mod platform;
 
-    users.sort_unstable();
-    users.dedup();
-    Ok(UsersInfo { users })
-}
+#[cfg(target_os = "macos")]
+#[path = "users/macos.rs"]
+mod platform;
 
-/// `collect_users()` — the non-Linux fallback message...
-///
-#[cfg(not(target_os = "linux"))]
-fn collect_users() -> Result<UsersInfo, AppError> {
-    Err(AppError::DataUnavailable(NOT_YET_IMPLEMENTED.into()))
-}
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+compile_error!(
+    "the `users` service has no implementation for this target; add src/services/users/<platform>.rs and wire it in via #[cfg] in src/services/users.rs"
+);
 
 /// `descriptor()` is this service's registration point, discovered automatically by
 /// `build.rs`
@@ -95,20 +78,19 @@ pub fn descriptor(_ctx: &ServiceContext) -> (ServiceMeta, Box<dyn ErasedService>
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 mod tests {
     use super::*;
 
-    /// `collect_returns_ok()` asserts that collecting logged-in users from `/var/run/utmp`
-    /// returns `Ok`
+    /// `collect_returns_ok()` asserts that collecting logged-in users returns `Ok` on every
+    /// implemented platform (Linux via `/var/run/utmp`, Windows via WTS, macOS via `utmpx`)
     ///
     #[test]
     fn collect_returns_ok() {
         assert!(UsersService.collect().is_ok());
     }
 
-    /// `render_does_not_panic()` asserts that rendering logged-in users from `/var/run/utmp`
-    /// does not panic... Phew!
+    /// `render_does_not_panic()` asserts that rendering logged-in users does not panic... Phew!
     ///
     #[test]
     fn render_does_not_panic() {

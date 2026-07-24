@@ -443,7 +443,7 @@ dependencies = [
 
 [[package]]
 name = "rust-cli-sysinfo"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "lexopt",
  "libc",
@@ -453,6 +453,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "utwt",
+ "windows",
 ]
 
 [[package]]

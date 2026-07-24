@@ -24,6 +24,15 @@ impl From<utwt::ParseError> for AppError {
     }
 }
 
+#[cfg(target_os = "windows")]
+impl From<windows::core::Error> for AppError {
+    /// `from()` converts a Win32/WTS API failure into `AppError` to facilitate error handling
+    ///
+    fn from(e: windows::core::Error) -> Self {
+        Self::DataUnavailable(format!("Windows session API error: {e}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -86,34 +86,54 @@ fn render_services(
     collected: &[(usize, CollectResult)],
     colors: &Colors,
 ) {
-    // Render all rows to intermediate memory structures to determine max width (for separator)
-    let mut active_rows = Vec::with_capacity(active.len());
-    for &idx in active {
-        let meta = registry.meta(idx);
-        let service = registry.service(idx);
+    let active_rows = build_active_rows(active, registry, collected);
+    let sep_len = calculate_separator_length(&active_rows);
 
-        let row = match collected.iter().find(|(i, _)| *i == idx) {
-            None => RenderedRow {
-                value: "n/a - result not collected".to_string(),
-                threshold: Threshold::Error,
-            },
-            Some((_, Err(e))) => RenderedRow {
-                value: format!("n/a - {e}"),
-                threshold: Threshold::Error,
-            },
-            Some((_, Ok(data))) => match service.render_erased(&**data) {
-                Err(e) => RenderedRow {
+    print_service_table_header(sep_len, colors);
+    for (label, row) in active_rows {
+        print_row(label, &row.value, &row.threshold, colors);
+    }
+    print_table_footer(sep_len, colors);
+}
+/// `build_active_rows()` builds a list of active services and their rendered rows
+///
+fn build_active_rows(
+    active: &[usize],
+    registry: &ServiceRegistry,
+    collected: &[(usize, CollectResult)],
+) -> Vec<(&'static str, RenderedRow)> {
+    active
+        .iter()
+        .map(|&idx| {
+            let meta = registry.meta(idx);
+            let service = registry.service(idx);
+            let row = match collected.iter().find(|(i, _)| *i == idx) {
+                None => RenderedRow {
+                    value: "n/a - result not collected".to_string(),
+                    threshold: Threshold::Error,
+                },
+                Some((_, Err(e))) => RenderedRow {
                     value: format!("n/a - {e}"),
                     threshold: Threshold::Error,
                 },
-                Ok(rendered_row) => rendered_row,
-            },
-        };
+                Some((_, Ok(data))) => match service.render_erased(&**data) {
+                    Err(e) => RenderedRow {
+                        value: format!("n/a - {e}"),
+                        threshold: Threshold::Error,
+                    },
+                    Ok(rendered_row) => rendered_row,
+                },
+            };
 
-        active_rows.push((meta.label, row));
-    }
+            (meta.label, row)
+        })
+        .collect()
+}
 
-    // Measure the longest line across all rendered output rows (trimming margins/line breaks)
+/// `calculate_separator_length()` calculates the length of the separator line
+/// based on the longest value string in `active_rows`
+///
+fn calculate_separator_length(active_rows: &[(&'static str, RenderedRow)]) -> usize {
     let max_value_len = active_rows
         .iter()
         .flat_map(|(_, row)| row.value.lines())
@@ -121,9 +141,12 @@ fn render_services(
         .max()
         .unwrap_or(0);
 
-    // Dynamically assemble the separator width and print the structured table header
-    let sep_len = LABEL_WIDTH + 3 + max_value_len;
+    LABEL_WIDTH + 3 + max_value_len
+}
 
+/// `print_service_table_header()` prints the table header
+///
+fn print_service_table_header(sep_len: usize, colors: &Colors) {
     println!(
         "{INDENT}{}{}{}\n",
         colors.bold,
@@ -131,13 +154,11 @@ fn render_services(
         generate_title(sep_len)
     );
     print!("{}", colors.reset);
+}
 
-    // Output aligned and styled content cells
-    for (label, row) in active_rows {
-        print_row(label, &row.value, &row.threshold, colors);
-    }
-
-    // Print table footer
+/// `print_table_footer()` prints the table footer
+///
+fn print_table_footer(sep_len: usize, colors: &Colors) {
     println!(
         "\n{INDENT}{}{}{}",
         colors.cyan,

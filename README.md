@@ -125,7 +125,7 @@ To create a new RCS service:
 
 ### Installation
 
-Grab the pre-compiled binary directly from the GitHub Releases Page and place it somewhere in your local system path:
+Grab the pre-compiled binary directly from the GitHub Releases Page and place it somewhere in your local system path (Linux example below):
 
 ```bash
 cp rust-cli-sysinfo ~/.local/bin/
@@ -162,7 +162,7 @@ rust-cli-sysinfo -h
 
 ### Shell Integration (Recommended)
 
-Adding the binary call to the end of your shell startup configuration script (e.g., `~/.bashrc` or `~/.zshrc`) will render **rust-cli-sysinfo** services output in your environment every time a new session starts up.
+Adding the binary call to the end of your shell startup configuration script (e.g., `~/.bashrc`, `~/.zshrc` or similar based on your OS/platform) will render **rust-cli-sysinfo** services output in your environment every time a new session starts up.
 
 Nice!
 
@@ -173,23 +173,24 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
 - [x] Streamline modular service generation patterns (following the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle))
 
 - [-] Additional metric services:
-    - Network interfaces (IP address added in v0.9.0)
-    - Thermal sensor(s)
-    - What else?
+    - [x] Network interfaces --> IP address service (IP) added in RCS v0.9.0
+    - [-] Thermal sensor(s)?
+    - [-] Battery status?
+    - [-] What else?
 
 - [-] Cross-platform compatibility expansion (macOS and Windows support profiles)
-    - Currently in progress, with a focus on utilizing the most appropriate cross-platform Rust crates for each supported service:
+    - [-] Currently in progress, with a focus on utilizing the most appropriate cross-platform Rust crates for each supported service:
 
       | **RCS**        |            |          **Platform**             |                                    |                                    |
       |--------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
       | **Service**    | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
       | CPU            | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ | $\color{yellow}{\huge\circledast}$ |
+      | GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | OS             | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | Kernel         | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | IP Address     | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | Hostname       | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$ |
+      | User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | Uptime         | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
       | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
@@ -197,9 +198,10 @@ RCS is designed to remain lean and fast, but some goals for upcoming releases in
       | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
       | Template       | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
 
-  Compatibility Notes:
-    - The GPU service (GPU) is currently Linux-only (using platform-specific calls), as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support GPU detection on those platforms as well
+### Cross-Platform Compatibility Notes
 
-    - The User(s) service (USR)--though implemented across all three platforms--is not yet implemented as a true cross-platform solution (no good solution exists... yet). In the meantime, we're using platform-specific service calls (see the logic in `/services/users` for details) that are otherwise completely operational
+- The **GPU service (GPU)** is currently using platform-specific calls, as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support true cross-platform GPU detection services
 
-    - The Load Average service (LOAD) is not available on Windows, as the concept of load averages is not applicable to that platform
+- The **User(s) service (USR)**--though also implemented across all three platforms--is not yet implemented as a cross-platform solution (no good solution exists yet). In the meantime, we're using platform-specific service calls (see the logic in `/services/users` for details) that are otherwise completely operational
+
+- The **Load Average service (LOAD)** is not available on Windows, as the concept of load averages is not applicable to that platform

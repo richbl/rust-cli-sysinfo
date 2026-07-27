@@ -79,6 +79,7 @@ impl ServiceRegistry {
     /// `debug_validate()` guards against a service file introducing an empty or duplicate
     /// service token
     ///
+    #[cfg_attr(not(debug_assertions), allow(clippy::unused_self))]
     fn debug_validate(&self) {
         #[cfg(debug_assertions)]
         {

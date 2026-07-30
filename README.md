@@ -116,16 +116,17 @@ To create a new RCS service:
 ### Requirements
 
 - **Run-Time**
-    - Any standard modern Linux, MacOS, or Windows environment
-    - **Rust-CLI-Sysinfo** releases include a pre-compiled binary that runs natively on a Linux AMD64 architecture
-        - Future releases may also include pre-compiled binaries for other platforms
+    - **Rust-CLI-Sysinfo** releases include pre-compiled binaries that runs natively on:
+        - Linux AMD64
+        - MacOS (AMD64 and ARM64)
+        - Windows
   
 - **Build-Time**
     - If you're interested in compiling from source, you'll need a functioning installation of the Rust toolchain (using Cargo)
 
 ### Installation
 
-Grab the pre-compiled binary directly from the GitHub Releases Page and place it somewhere in your local system path (Linux example below):
+Grab the pre-compiled binaries directly from the GitHub Releases Page and place it somewhere in your local system path (Linux example below):
 
 ```bash
 cp rust-cli-sysinfo ~/.local/bin/
@@ -166,42 +167,39 @@ Adding the binary call to the end of your shell startup configuration script (e.
 
 Nice!
 
+## Cross Platform Compatibility Matrix
+
+| **RCS**        |            |          **Platform**             |                                    |                                    |
+|--------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
+| **Service**    | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
+| CPU            | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| OS             | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Kernel         | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| IP Address     | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Hostname       | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Uptime         | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Load Averages  | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
+| CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Template       | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+
+Note that the **Load Average service (LOAD)** is not available on Windows, as the concept of load averages is not applicable (n/a) to that platform
+    
 ## Roadmap
 
-RCS is designed to remain lean and fast, but some goals for upcoming releases include:
+RCS is designed to remain lean and fast. Here are some goals for upcoming releases:
 
 - [x] Streamline modular service generation patterns (following the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle))
-
-- [-] Additional metric services:
+- [ ] Additional metric services:
     - [x] Network interfaces --> IP address service (IP) added in RCS v0.9.0
-    - [-] Thermal sensor(s)?
-    - [-] Battery status?
-    - [-] What else?
+    - [ ] Thermal sensor(s)?
+    - [ ] Battery status?
+    - [ ] What else?
 
-- [-] Cross-platform compatibility expansion (macOS and Windows support profiles)
-    - [-] Currently in progress, with a focus on utilizing the most appropriate cross-platform Rust crates for each supported service:
+- [ ] Cross-platform compatibility using system-agnostic Rust crates: makes for better (safer) implementation and easier longer-term codebase maintenance
+    - [ ] The **GPU service (GPU)** is currently using platform-specific system calls, as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support true cross-platform GPU detection services
+    - [ ] The **User(s) service (USR)** is currently using platform-specific system calls, as a stable cross-platform Rust crate does not exist (yet)
 
-      | **RCS**        |            |          **Platform**             |                                    |                                    |
-      |--------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
-      | **Service**    | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
-      | CPU            | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | OS             | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Kernel         | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | IP Address     | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Hostname       | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Uptime         | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Load Averages  | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
-      | CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-      | Template       | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-
-### Cross-Platform Compatibility Notes
-
-- The **GPU service (GPU)** is currently using platform-specific calls, as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support true cross-platform GPU detection services
-
-- The **User(s) service (USR)**--though also implemented across all three platforms--is not yet implemented as a cross-platform solution (no good solution exists yet). In the meantime, we're using platform-specific service calls (see the logic in `/services/users` for details) that are otherwise completely operational
-
-- The **Load Average service (LOAD)** is not available on Windows, as the concept of load averages is not applicable to that platform

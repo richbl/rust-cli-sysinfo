@@ -141,7 +141,7 @@ fn calculate_separator_length(active_rows: &[(&'static str, RenderedRow)]) -> us
         .max()
         .unwrap_or(0);
 
-    LABEL_WIDTH + 3 + max_value_len
+    LABEL_WIDTH + 6 + max_value_len
 }
 
 /// `print_service_table_header()` prints the table header

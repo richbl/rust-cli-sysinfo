@@ -18,12 +18,6 @@ pub fn read_hex_u16(path: &Path) -> Result<u16, AppError> {
 
 /// `generate_title()` creates a single-line titlebar of exactly `sep_len` display columns
 ///
-/// The title is formatted as `APP_NAME` followed by enough `─` characters to fill the
-/// remaining width, so the total rendered length equals `sep_len`. Callers control the
-/// width:
-/// - Static contexts (help, services list): pass `SEP_FALLBACK.chars().count()`
-/// - Dynamic contexts (services output): pass the computed content column width
-///
 pub fn generate_title(sep_len: usize) -> String {
     let app_len = APP_NAME.chars().count() + 1; // +1 for the separating space
 

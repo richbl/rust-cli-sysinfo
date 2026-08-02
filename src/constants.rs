@@ -2,8 +2,6 @@
 pub const APP_NAME: &str = "Rust-CLI-SysInfo";
 
 /// Indentation prefix applied to every output row and header line
-///
-/// Change this value to adjust the starting indent of all utility outputs
 pub const INDENT: &str = "  ";
 
 /// Fallback horizontal separator line used for section separators in static contexts
@@ -40,9 +38,15 @@ pub const SECS_PER_DAY: u64 = 86_400;
 pub const KB_PER_GB: u64 = 1_048_576;
 
 // Warning/Critical thresholds percentages
+//
 pub const CPU_WARN_PCT: f64 = 70.0;
 pub const CPU_CRIT_PCT: f64 = 90.0;
+
 pub const MEM_WARN_PCT: f64 = 70.0;
 pub const MEM_CRIT_PCT: f64 = 90.0;
+
 pub const DISK_WARN_PCT: f64 = 70.0;
 pub const DISK_CRIT_PCT: f64 = 90.0;
+
+pub const BATTERY_WARN_PCT: f64 = 30.0;
+pub const BATTERY_CRIT_PCT: f64 = 10.0;

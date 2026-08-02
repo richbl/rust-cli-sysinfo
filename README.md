@@ -25,6 +25,7 @@
         - System load averages (over one, five, and 15 minutes)
         - Memory usage
         - Disk usage (defaults to `/home`, customizable via `-d`/`--disk`)
+        - Battery health/status
 
 - **Customizable Services Layout**
     - Select exactly which service components to display and specify their order using service tokens (see `-s`/`--services` for details)
@@ -34,7 +35,7 @@
     - New system services can be added easily by creating a new service file, dropping it into the `src/services` folder: RCS will automatically detect and render it as an available new service
 
 - **Visual Service Status Indicators**
-    - Color-coded output for CPU, memory, and disk utilization thresholds:
+    - Color-coded output for CPU, memory, disk utilization, and battery status thresholds:
 
         - **Normal:** $\color{green}{\text{Green}}$
         - **Warning:** $\color{yellow}{\text{Yellow}}$
@@ -136,12 +137,12 @@ That's it! You can now run `rust-cli-sysinfo` from within any terminal session.
 
 ### Compiling from Source
 
-If you prefer to compile this project from sources, here are the steps:
+If you prefer to compile this project from sources, here are the steps (Linux example):
 
 ```console
 git clone https://github.com/richbl/rust-cli-sysinfo.git
 cd rust-cli-sysinfo
-cargo build --release --bin rust-cli-sysinfo
+cargo build --release
 cp target/release/rust-cli-sysinfo ~/.local/bin/
 ```
 
@@ -169,25 +170,26 @@ Nice!
 
 ## Cross Platform Compatibility Matrix
 
-| **RCS**        |            |          **Platform**             |                                    |                                    |
-|--------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
-| **Service**    | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
-| CPU            | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| GPU(s)         | GPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| OS             | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Kernel         | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| IP Address     | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Hostname       | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| User(s)        | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Uptime         | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Load Averages  | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
-| CPU Usage      | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Memory Usage   | RAMU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Disk Usage     | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
-| Template       | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| **RCS**             |            |          **Platform**             |                                    |                                    |
+|-------------------- |----------- |:--------------------------------: |:----------------------------------:|:----------------------------------:|
+| **Service**         | **Token**  |           **Linux**               |           **Windows**              |             **Mac**                |
+| CPU                 | CPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| GPU(s)              | GPU        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| OS                  | OS         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Kernel              | KNL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| IP Address          | IP         | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Hostname            | HST        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| User(s)             | USR        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Uptime              | UPT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Load Averages       | LOAD       | $\color{green}{\huge\circledast}$ |               n/a                  | $\color{green}{\huge\circledast}$  |
+| CPU Usage           | CPUU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Memory Usage        | RAMU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Battery Status      | BAT        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Disk Usage          | DSKU       | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
+| Template (example)  | TPL        | $\color{green}{\huge\circledast}$ | $\color{green}{\huge\circledast}$  | $\color{green}{\huge\circledast}$  |
 
 Note that the **Load Average service (LOAD)** is not available on Windows, as the concept of load averages is not applicable (n/a) to that platform
-    
+
 ## Roadmap
 
 RCS is designed to remain lean and fast. Here are some goals for upcoming releases:
@@ -195,11 +197,10 @@ RCS is designed to remain lean and fast. Here are some goals for upcoming releas
 - [x] Streamline modular service generation patterns (following the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle))
 - [ ] Additional metric services:
     - [x] Network interfaces --> IP address service (IP) added in RCS v0.9.0
+    - [x] Battery status --> battery service (BAT) added in RCS v0.14.0
     - [ ] Thermal sensor(s)?
-    - [ ] Battery status?
     - [ ] What else?
 
 - [ ] Cross-platform compatibility using system-agnostic Rust crates: makes for better (safer) implementation and easier longer-term codebase maintenance
     - [ ] The **GPU service (GPU)** is currently using platform-specific system calls, as the underlying `sysinfo` crate does not yet support cross-platform GPU detection. This is expected to change in a future release of `sysinfo`, at which point RCS will be updated to support true cross-platform GPU detection services
     - [ ] The **User(s) service (USR)** is currently using platform-specific system calls, as a stable cross-platform Rust crate does not exist (yet)
-

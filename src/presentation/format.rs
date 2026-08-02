@@ -6,8 +6,13 @@ use crate::constants::{INDENT, LABEL_WIDTH, SECS_PER_DAY, SECS_PER_HOUR, SECS_PE
 pub enum Threshold {
     /// No threshold check; the row is rendered in the default color
     None,
-    /// Apply color thresholds: yellow at `warn`, red at `crit`
+
+    /// Apply color thresholds where a HIGHER value is worse (e.g. CPU/memory/disk usage)
     Check { value: f64, warn: f64, crit: f64 },
+
+    /// Apply color thresholds where a LOWER value is worse
+    CheckInverse { value: f64, warn: f64, crit: f64 },
+
     /// Render in red to indicate a service collection or rendering error
     Error,
 }
@@ -22,12 +27,30 @@ pub struct RenderedRow {
 ///
 #[must_use]
 pub fn color_for_threshold(threshold: &Threshold, c: &Colors) -> &'static str {
-    match threshold {
-        Threshold::Check { value, crit, .. } if value >= crit => c.red,
-        Threshold::Check { value, warn, .. } if value >= warn => c.yellow,
-        Threshold::Check { .. } => c.green,
-        Threshold::None => c.reset,
-        Threshold::Error => c.red,
+    let (value, warn, crit, ascending) = match threshold {
+        Threshold::None => return c.reset,
+        Threshold::Error => return c.red,
+        Threshold::Check { value, warn, crit } => (*value, *warn, *crit, true),
+        Threshold::CheckInverse { value, warn, crit } => (*value, *warn, *crit, false),
+    };
+
+    let is_critical = if ascending {
+        value >= crit
+    } else {
+        value <= crit
+    };
+    let is_warning = if ascending {
+        value >= warn
+    } else {
+        value <= warn
+    };
+
+    if is_critical {
+        c.red
+    } else if is_warning {
+        c.yellow
+    } else {
+        c.green
     }
 }
 
@@ -144,5 +167,99 @@ mod tests {
     fn color_for_threshold_error_returns_red() {
         let c = Colors::new(true, None);
         assert_eq!(color_for_threshold(&Threshold::Error, &c), c.red);
+    }
+
+    // Threshold::CheckInverse tests — the "lower is worse" counterpart to Threshold::Check,
+    // used by services like battery where a low remaining percentage is the danger signal
+
+    /// `checkinverse_stores_all_fields()` asserts that `Threshold::CheckInverse` correctly stores
+    /// its parameters
+    ///
+    #[test]
+    fn checkinverse_stores_all_fields() -> Result<(), String> {
+        let t = Threshold::CheckInverse {
+            value: 42.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+
+        let Threshold::CheckInverse { value, warn, crit } = t else {
+            return Err("expected Threshold::CheckInverse, got a different variant".to_string());
+        };
+
+        assert!((value - 42.0).abs() < f64::EPSILON);
+        assert!((warn - 30.0).abs() < f64::EPSILON);
+        assert!((crit - 10.0).abs() < f64::EPSILON);
+        Ok(())
+    }
+
+    /// `color_for_checkinverse_above_warn_returns_green()` asserts that a value above warn
+    /// returns green (plenty of charge remaining)
+    ///
+    #[test]
+    fn color_for_checkinverse_above_warn_returns_green() {
+        let c = Colors::new(true, None);
+        let t = Threshold::CheckInverse {
+            value: 76.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+        assert_eq!(color_for_threshold(&t, &c), c.green);
+    }
+
+    /// `color_for_checkinverse_at_warn_boundary_returns_yellow()` asserts that a value exactly at
+    /// `warn` returns yellow (the boundary is inclusive)
+    ///
+    #[test]
+    fn color_for_checkinverse_at_warn_boundary_returns_yellow() {
+        let c = Colors::new(true, None);
+        let t = Threshold::CheckInverse {
+            value: 30.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+        assert_eq!(color_for_threshold(&t, &c), c.yellow);
+    }
+
+    /// `color_for_checkinverse_between_crit_and_warn_returns_yellow()` asserts that a value
+    /// between `crit` and `warn` returns yellow
+    ///
+    #[test]
+    fn color_for_checkinverse_between_crit_and_warn_returns_yellow() {
+        let c = Colors::new(true, None);
+        let t = Threshold::CheckInverse {
+            value: 20.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+        assert_eq!(color_for_threshold(&t, &c), c.yellow);
+    }
+
+    /// `color_for_checkinverse_at_crit_boundary_returns_red()` asserts that a value exactly at
+    /// `crit` returns red (the boundary is inclusive)
+    ///
+    #[test]
+    fn color_for_checkinverse_at_crit_boundary_returns_red() {
+        let c = Colors::new(true, None);
+        let t = Threshold::CheckInverse {
+            value: 10.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+        assert_eq!(color_for_threshold(&t, &c), c.red);
+    }
+
+    /// `color_for_checkinverse_below_crit_returns_red()` asserts that a value below `crit`
+    /// returns red
+    ///
+    #[test]
+    fn color_for_checkinverse_below_crit_returns_red() {
+        let c = Colors::new(true, None);
+        let t = Threshold::CheckInverse {
+            value: 2.0,
+            warn: 30.0,
+            crit: 10.0,
+        };
+        assert_eq!(color_for_threshold(&t, &c), c.red);
     }
 }

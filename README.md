@@ -100,7 +100,7 @@ This will result in the following output:
 
 Want to create a new service that doesn't yet exist in RCS?
 
-RCS follows the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle) where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
+RCS follows the [Open–Closed Principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle) (the 'O' in [SOLID Programming Principles](https://en.wikipedia.org/wiki/SOLID)), where every service is implemented within its own Rust source file and automatically registers with the utility at compile time. No need to edit or modify existing source files: just add a separate new service file and rebuild the project.
 
 To create a new RCS service:
 
@@ -194,7 +194,7 @@ Note that the **Load Average service (LOAD)** is not available on Windows, as th
 
 RCS is designed to remain lean and fast. Here are some goals for upcoming releases:
 
-- [x] Streamline modular service generation patterns (following the [Open–Closed Principle (OCP)](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle))
+- [x] Streamline modular service generation patterns following the [Open–Closed Principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle) (the 'O' in [SOLID Programming Principles](https://en.wikipedia.org/wiki/SOLID)) --> integration completed in RCS 0.7.0
 - [ ] Additional metric services:
     - [x] Network interfaces --> IP address service (IP) added in RCS v0.9.0
     - [x] Battery status --> battery service (BAT) added in RCS v0.14.0

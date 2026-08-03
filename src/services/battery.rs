@@ -123,9 +123,9 @@ fn format_hm(seconds: u64) -> String {
     let mins = mins_total % 60;
 
     if hours > 0 {
-        format!("{hours}h:{mins}m")
+        format!("{hours:02}h:{mins:02}m")
     } else {
-        format!("{mins}m")
+        format!("{mins:02}m")
     }
 }
 
@@ -176,7 +176,7 @@ mod tests {
     ///
     #[test]
     fn format_hm_zero_seconds_shows_zero_minutes() {
-        assert_eq!(format_hm(0), "0m");
+        assert_eq!(format_hm(0), "00m");
     }
 
     /// `format_hm_under_an_hour_omits_hours()` asserts that durations under an hour omit the
@@ -200,7 +200,7 @@ mod tests {
     ///
     #[test]
     fn format_hm_over_an_hour_includes_hours_and_minutes() {
-        assert_eq!(format_hm(9 * 3600 + 42 * 60), "9h:42m");
+        assert_eq!(format_hm(9 * 3600 + 42 * 60), "09h:42m");
     }
 
     /// `format_hm_exact_hour_shows_zero_minutes()` asserts that an exact hour still shows an
@@ -208,7 +208,7 @@ mod tests {
     ///
     #[test]
     fn format_hm_exact_hour_shows_zero_minutes() {
-        assert_eq!(format_hm(2 * 3600), "2h:0m");
+        assert_eq!(format_hm(2 * 3600), "02h:00m");
     }
 
     // format_reading() tests
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn discharging_with_estimate_shows_soc_and_time_remaining() {
         let r = make_reading(76.0, State::Discharging, None, Some(9 * 3600 + 42 * 60));
-        assert_eq!(format_reading(&r), "76.0% (discharging: 9h:42m remaining)");
+        assert_eq!(format_reading(&r), "76.0% (discharging: 09h:42m remaining)");
     }
 
     /// `discharging_without_estimate_omits_time()` asserts that a missing time-to-empty estimate
@@ -407,7 +407,7 @@ mod tests {
             batteries: vec![make_reading(87.5, State::Discharging, None, Some(3600))],
         };
         let row = BatteryService.render(&data).unwrap();
-        assert_eq!(row.value, "87.5% (discharging: 1h:0m remaining)");
+        assert_eq!(row.value, "87.5% (discharging: 01h:00m remaining)");
         assert_is_checkinverse_matching(&row.threshold, 87.5);
     }
 

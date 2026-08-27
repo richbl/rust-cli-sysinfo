@@ -95,7 +95,15 @@ fn format_reading(reading: &BatteryReading) -> String {
 
     match reading.state {
         State::Charging => match reading.time_to_full_secs {
-            Some(secs) => format!("{soc:.1}% (charging: {} to full)", format_hm(secs)),
+            Some(secs) => {
+                // If the estimated time to full is zero (or SOC is effectively 100%),
+                // treat the battery as on AC power rather than "charging: 00m to full"
+                if secs == 0 || (soc - 100.0).abs() < f64::EPSILON {
+                    format!("{soc:.1}% (on AC power)")
+                } else {
+                    format!("{soc:.1}% (charging: {} to full)", format_hm(secs))
+                }
+            }
             None => format!("{soc:.1}% (charging...)"),
         },
         State::Discharging => match reading.time_to_empty_secs {

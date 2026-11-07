@@ -8,7 +8,7 @@
   lexopt = "0.3.2"
   libc = "0.2"
 
-  sysinfo = { version = "0.39", features = ["disk"] }
+  sysinfo = { version = "0.40", features = ["disk"] }
   local-ip-address = "0.6"
   starship-battery = "0.12"
   thiserror = "2"

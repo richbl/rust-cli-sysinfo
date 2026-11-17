@@ -5,6 +5,8 @@
 <a href="https://github.com/richbl/rust-cli-sysinfo/pulls?q=is%3Apr+state%3Aclosed"><img align="middle" alt="Link to PRs" src="https://badgen.net/github/last-commit/richbl/rust-cli-sysinfo?color=blue&icon=github"></a>
 <a href="https://rust-reportcard.xuri.me/report/github.com/richbl/rust-cli-sysinfo"><img align="middle" alt="Rust Report Card" src="https://rust-reportcard.xuri.me/badge/github.com/richbl/rust-cli-sysinfo"></a>
 <a href="https://app.codacy.com/gh/richbl/rust-cli-sysinfo/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img align="middle" alt="Codacy Badge" src="https://app.codacy.com/project/badge/Grade/e79c70051570426bb353b230332fe623"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=richbl_rust-cli-sysinfo" target="_blank" rel="noopener noreferrer"><img align="middle" alt="SonarCloud Badge" src="https://sonarcloud.io/api/project_badges/measure?project=richbl_rust-cli-sysinfo&metric=alert_status" alt="Quality gate status" />
+</a>
 <a href="https://codeberg.org/richbl/rust-cli-sysinfo"><img align="middle" width="85" alt="Gitberg logo" src="https://raw.githubusercontent.com/richbl/rust-cli-sysinfo/refs/heads/main/.github/assets/gitberg_logo.png"></a>
 <!-- markdownlint-enable MD033 -->
 

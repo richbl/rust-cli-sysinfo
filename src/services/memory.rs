@@ -20,7 +20,8 @@ impl Service for MemoryService {
     /// then converts `sysinfo`'s byte-denominated values to KB
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let mut sys = sysinfo::System::new();
+        let mut sys = sysinfo::System::new()
+            .map_err(|e| AppError::DataUnavailable(format!("sysinfo init failed: {e}")))?;
         sys.refresh_memory();
 
         let total = sys.total_memory() / 1024;

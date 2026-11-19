@@ -16,7 +16,7 @@ impl Service for KernelService {
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         let version = sysinfo::System::kernel_version()
-            .ok_or_else(|| AppError::DataUnavailable("kernel version unavailable".into()))?;
+            .map_err(|e| AppError::DataUnavailable(format!("kernel version unavailable: {e}")))?;
         Ok(KernelInfo { version })
     }
 

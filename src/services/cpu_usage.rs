@@ -33,7 +33,8 @@ impl Service for CpuUsageService {
     /// apart
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let mut sys = sysinfo::System::new();
+        let mut sys = sysinfo::System::new()
+            .map_err(|e| AppError::DataUnavailable(format!("sysinfo init failed: {e}")))?;
 
         sys.refresh_cpu_usage();
         thread::sleep(Duration::from_millis(self.sample_ms));

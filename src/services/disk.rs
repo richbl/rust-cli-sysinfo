@@ -67,9 +67,9 @@ impl Service for DiskService {
             )));
         }
 
-        let disks = sysinfo::Disks::new_with_refreshed_list();
+        let disks = sysinfo::Disks::new_with_refreshed_list()
+            .map_err(|e| AppError::DataUnavailable(format!("disk enumeration failed: {e}")))?;
         let mount_points: Vec<&Path> = disks
-            .list()
             .iter()
             .map(sysinfo::Disk::mount_point)
             .collect();
@@ -82,7 +82,6 @@ impl Service for DiskService {
         };
 
         let disk = disks
-            .list()
             .iter()
             .find(|d| d.mount_point() == best_mount)
             .expect("best_matching_mount() must return a mount point taken from `disks`");

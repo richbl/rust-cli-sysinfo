@@ -28,7 +28,8 @@ impl Service for LoadAvgService {
 
         #[cfg(not(windows))]
         {
-            let load = sysinfo::System::load_average();
+            let load = sysinfo::System::load_average()
+                .map_err(|e| AppError::DataUnavailable(format!("load average unavailable: {e}")))?;
             Ok(LoadAvgInfo {
                 loadavg: (load.one, load.five, load.fifteen),
             })

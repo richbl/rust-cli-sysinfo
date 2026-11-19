@@ -16,7 +16,7 @@ impl Service for HostnameService {
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         let hostname = sysinfo::System::host_name()
-            .ok_or_else(|| AppError::DataUnavailable("hostname unavailable".into()))?;
+            .map_err(|e| AppError::DataUnavailable(format!("hostname unavailable: {e}")))?;
         Ok(HostnameInfo { hostname })
     }
 

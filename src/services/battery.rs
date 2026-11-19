@@ -113,6 +113,7 @@ fn format_reading(reading: &BatteryReading) -> String {
         State::Full => format!("{soc:.1}% (on AC power)"),
         State::Empty => format!("{soc:.1}% (empty)"),
         State::Unknown => format_unknown(soc),
+        State::Paused => format!("{soc:.1}% (charge limit reached)"),
     }
 }
 

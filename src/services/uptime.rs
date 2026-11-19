@@ -16,9 +16,9 @@ impl Service for UptimeService {
     /// `collect()` reads system uptime in seconds
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        Ok(UptimeInfo {
-            uptime_secs: sysinfo::System::uptime(),
-        })
+        let uptime_secs = sysinfo::System::uptime()
+            .map_err(|e| AppError::DataUnavailable(format!("uptime unavailable: {e}")))?;
+        Ok(UptimeInfo { uptime_secs })
     }
 
     /// `render()` renders system uptime formatted as `DDDd:HHh:MMm:SSs`

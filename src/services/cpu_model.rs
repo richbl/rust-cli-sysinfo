@@ -17,7 +17,8 @@ impl Service for CpuModelService {
     /// brand string off the first logical CPU
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
-        let mut sys = sysinfo::System::new();
+        let mut sys = sysinfo::System::new()
+            .map_err(|e| AppError::DataUnavailable(format!("sysinfo init failed: {e}")))?;
         sys.refresh_cpu_all();
 
         let model = sys.cpus().first().map(|cpu| cpu.brand().to_string());

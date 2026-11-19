@@ -16,9 +16,10 @@ impl Service for OsService {
     ///
     fn collect(&self) -> Result<Self::Data, AppError> {
         let name = sysinfo::System::long_os_version()
+            .ok()
             .or_else(|| {
-                let name = sysinfo::System::name()?;
-                Some(match sysinfo::System::os_version() {
+                let name = sysinfo::System::name().ok()?;
+                Some(match sysinfo::System::os_version().ok() {
                     Some(version) => format!("{name} {version}"),
                     None => name,
                 })
